@@ -1,6 +1,10 @@
 {
+  "/api/humanize/route": "app/api/humanize/route.js",
+  "/pricing/page": "app/pricing/page.js",
+  "/dashboard/page": "app/dashboard/page.js",
   "/page": "app/page.js",
-  "/notes/page": "app/notes/page.js",
+  "/settings/page": "app/settings/page.js",
   "/chat/page": "app/chat/page.js",
-  "/pricing/page": "app/pricing/page.js"
+  "/api/auth/[...nextauth]/route": "app/api/auth/[...nextauth]/route.js",
+  "/api/stripe/create-checkout/route": "app/api/stripe/create-checkout/route.js"
 }

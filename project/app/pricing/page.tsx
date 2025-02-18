@@ -7,27 +7,31 @@ import { UserNav } from "@/components/user-nav";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Check, Sparkles, Brain, Zap, GraduationCap, Star, ArrowRight, Shield, Clock, Users, Crown, Rocket } from "lucide-react";
+import { Check, Sparkles, Brain, Zap, GraduationCap, Star, ArrowRight, Shield, Clock, Users, Crown, Rocket, Loader2 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import Link from "next/link";
+import { useSession } from "next-auth/react";
+import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 
 export default function PricingPage() {
-  const [isAnnual, setIsAnnual] = useState(false);
+  const [isLoading, setIsLoading] = useState<string | null>(null);
+  const { data: session } = useSession();
   const [hoveredPlan, setHoveredPlan] = useState<string | null>(null);
+  const router = useRouter();
 
   const plans = [
     {
-      name: "Basic",
+      name: "Free",
       description: "Perfect for getting started",
-      price: isAnnual ? "0" : "0",
-      period: isAnnual ? "/year" : "/month",
+      price: "Free",
+      period: "",
       features: [
-        "5 AI Study Sessions per month",
-        "Basic note organization",
-        "Access to community resources",
-        "Email support",
-        "Basic analytics"
+        "5 Summarised Video lectures",
+        "5 FlashCard Sets (75)",
+        "10 text humanizations",
+        "C1 Generation Speed"
       ],
       icon: Brain,
       color: "from-purple-500/10 to-blue-500/10",
@@ -38,48 +42,75 @@ export default function PricingPage() {
     {
       name: "Pro",
       description: "For dedicated learners",
-      price: isAnnual ? "144" : "15",
-      period: isAnnual ? "/year" : "/month",
+      price: "3.99",
+      period: "/week",
       features: [
-        "Unlimited AI Study Sessions",
-        "Advanced note organization",
-        "Priority AI response time",
-        "Custom study plans",
-        "Progress tracking",
-        "Advanced analytics",
-        "24/7 Priority support"
+        "1000 Summarised Video Lectures",
+        "1000 FlashCard Sets (15k)",
+        "500 Text Humanizations",
+        "A1-Super Generation Speed"
       ],
       icon: Crown,
       color: "from-purple-500/20 to-blue-500/20",
       buttonColor: "bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600",
-      buttonText: "Start Pro Trial",
+      buttonText: "Start Pro Plan",
       popular: true
     },
     {
-      name: "Enterprise",
+      name: "Basic",
       description: "For institutions & teams",
-      price: "Custom",
-      period: "",
+      price: "1.99",
+      period: "/week",
       features: [
-        "Everything in Pro plan",
-        "Custom integrations",
-        "Dedicated support",
-        "Analytics & reporting",
-        "SSO & advanced security",
-        "Team collaboration",
-        "Custom AI training"
+        "20 Summarised Video lectures",
+        "20 Flashcard Sets (300)",
+        "40 Text humanizations",
+        "B1 Generation Speed"
       ],
       icon: Shield,
       color: "from-blue-500/10 to-cyan-500/10",
       buttonColor: "bg-white/10 hover:bg-white/20",
-      buttonText: "Contact Sales",
+      buttonText: "Start Basic Plan",
       popular: false
     }
   ];
 
+  const handleSubscribe = async (planId: string) => {
+    try {
+      setIsLoading(planId);
+
+      if (!session) {
+        router.push('/auth/signin');
+        return;
+      }
+
+      const response = await fetch('/api/stripe/create-checkout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          planId,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create checkout session');
+      }
+
+      const data = await response.json();
+      window.location.href = data.url;
+    } catch (error) {
+      console.error('Error:', error);
+      toast.error('Something went wrong. Please try again.');
+    } finally {
+      setIsLoading(null);
+    }
+  };
+
   return (
-    <div className="flex min-h-screen flex-col bg-black text-white">
-      <header className="sticky top-0 z-50 w-full border-b border-white/10 bg-black/95 backdrop-blur supports-[backdrop-filter]:bg-black/60">
+    <div className="flex min-h-screen flex-col">
+      <header className="fixed top-0 z-50 w-full theme-header">
         <div className="flex h-14 items-center px-6">
           <MainNav />
           <div className="ml-auto flex items-center space-x-4">
@@ -89,132 +120,130 @@ export default function PricingPage() {
         </div>
       </header>
 
-      <div className="flex-1 space-y-8 p-8 pt-6">
+      <div className="flex-1">
         {/* Enhanced Header with Gradient Animation */}
-        <div className="relative">
-          <div className="absolute inset-0 bg-gradient-to-r from-purple-500/20 via-blue-500/10 to-purple-500/20 animate-gradient" />
-          <div className="absolute inset-0" style={{
-            backgroundImage: 'radial-gradient(circle at center, rgba(255,255,255,0.1) 1px, transparent 1px)',
-            backgroundSize: '20px 20px'
-          }} />
-          <div className="relative text-center space-y-4 py-16">
-            <div className="inline-flex items-center space-x-2 bg-white/5 rounded-full px-4 py-1.5 mb-8 border border-white/10 hover:border-white/20 transition-colors">
+        <div className="relative w-full min-h-[400px] flex items-center justify-center">
+          <div className="absolute inset-0 w-screen theme-gradient-bg animate-gradient" />
+          <div className="absolute inset-0 w-screen" 
+            style={{
+              backgroundImage: 'radial-gradient(circle at center, rgba(120, 119, 198, 0.05) 1px, transparent 1px)',
+              backgroundSize: '24px 24px',
+              backgroundPosition: '0 0'
+            }}
+          />
+          <div className="relative w-full max-w-[1200px] mx-auto text-center px-6 pt-32 pb-16">
+            <div className="inline-flex items-center space-x-2 bg-white/50 backdrop-blur-sm rounded-full px-4 py-1.5 mb-8 border border-purple-500/20">
               <Rocket className="w-4 h-4 text-purple-400" />
-              <span className="text-sm text-gray-300">New Features Available</span>
+              <span className="text-sm text-foreground/60">Simple Weekly Pricing</span>
             </div>
-            <h1 className="text-5xl font-bold tracking-tight bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
+            <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-blue-600 leading-[1.4] mb-8 px-4 py-2">
               Choose Your Learning Journey
             </h1>
-            <p className="text-gray-400 max-w-2xl mx-auto text-lg">
+            <p className="text-foreground/60 max-w-2xl mx-auto text-base sm:text-lg px-4 leading-relaxed">
               Unlock the power of AI-enhanced learning with our flexible plans designed for every student's needs.
             </p>
-            
-            {/* Enhanced Billing Toggle */}
-            <div className="flex items-center justify-center space-x-4 mt-8">
-              <span className={`text-sm transition-colors duration-200 ${!isAnnual ? 'text-white' : 'text-gray-400'}`}>Monthly</span>
-              <div className="relative">
-                <Switch
-                  checked={isAnnual}
-                  onCheckedChange={setIsAnnual}
-                  className="data-[state=checked]:bg-gradient-to-r from-purple-500 to-blue-500"
-                />
-                {isAnnual && (
-                  <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-gradient-to-r from-purple-500 to-blue-500 text-white px-3 py-1 rounded-full text-xs font-medium animate-bounce">
-                    Save 20%
-                  </div>
-                )}
-              </div>
-              <span className={`text-sm transition-colors duration-200 ${isAnnual ? 'text-white' : 'text-gray-400'}`}>Annual</span>
-            </div>
           </div>
         </div>
 
         {/* Enhanced Pricing Cards */}
-        <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3 max-w-7xl mx-auto pt-8">
-          {plans.map((plan, index) => (
-            <div 
-              key={plan.name} 
-              className="relative group"
-              onMouseEnter={() => setHoveredPlan(plan.name)}
-              onMouseLeave={() => setHoveredPlan(null)}
-            >
-              {plan.popular && (
-                <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-gradient-to-r from-purple-500 to-blue-500 text-white px-4 py-1 rounded-full text-sm font-medium z-10 flex items-center space-x-1">
-                  <Crown className="w-4 h-4 mr-1" />
-                  <span>Most Popular</span>
-                </div>
-              )}
-              <Card 
-                className={`
-                  relative bg-black/80 backdrop-blur-sm border 
-                  ${plan.popular ? 'border-purple-500/50 bg-gradient-to-br from-purple-500/[0.15] to-blue-500/[0.15]' : 'border-white/10'} 
-                  hover:border-white/20 transition-all duration-500 h-full 
-                  transform hover:scale-105 hover:shadow-2xl hover:shadow-purple-500/10
-                  ${hoveredPlan === plan.name ? 'scale-105' : 'scale-100'}
-                `}
+        <div className="space-y-8 p-8">
+          <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3 max-w-7xl mx-auto">
+            {plans.map((plan) => (
+              <div 
+                key={plan.name} 
+                className={`relative group ${plan.popular ? 'lg:scale-105' : 'lg:scale-95'}`}
+                onMouseEnter={() => setHoveredPlan(plan.name)}
+                onMouseLeave={() => setHoveredPlan(null)}
               >
-                <div className={`absolute inset-0 rounded-lg bg-gradient-to-br ${plan.color} opacity-0 transition-opacity duration-500 ${hoveredPlan === plan.name ? 'opacity-100' : 'opacity-0'}`} />
-                <CardHeader className="relative space-y-4">
-                  <div className="flex items-center space-x-4">
-                    <div className={`p-3 rounded-lg ${plan.popular ? 'bg-gradient-to-r from-purple-500/80 to-blue-500/80 shadow-lg shadow-purple-500/20' : 'bg-white/10'} transform transition-transform duration-300 group-hover:scale-110`}>
-                      <plan.icon className="h-6 w-6 text-white" />
-                    </div>
-                    <div>
-                      <CardTitle className="text-2xl font-bold text-white">{plan.name}</CardTitle>
-                      <CardDescription className="text-gray-200">{plan.description}</CardDescription>
-                    </div>
+                {plan.popular && (
+                  <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-gradient-to-r from-purple-500 to-blue-500 text-white px-4 py-1 rounded-full text-sm font-medium z-10 flex items-center space-x-1 transition-transform duration-300 transform group-hover:scale-[1.02] origin-bottom">
+                    <Crown className="w-4 h-4 mr-1" />
+                    <span>Most Popular</span>
                   </div>
-                  <div className="flex items-baseline">
-                    {plan.price === "Custom" ? (
-                      <span className="text-4xl font-bold text-white">Custom</span>
-                    ) : (
-                      <>
-                        <span className="text-sm font-medium mr-2 text-gray-200">$</span>
-                        <span className="text-4xl font-bold text-white">{plan.price}</span>
-                        <span className="text-gray-200 ml-2">{plan.period}</span>
-                      </>
-                    )}
-                  </div>
-                </CardHeader>
-                <CardContent className="relative space-y-6">
-                  <Button 
-                    className={`
-                      w-full ${plan.buttonColor} transform transition-all duration-300 
-                      hover:scale-105 h-12 group/button font-semibold text-white shadow-lg shadow-purple-500/20
-                      ${hoveredPlan === plan.name ? 'scale-105' : 'scale-100'}
-                    `}
-                    variant={plan.popular ? "default" : "outline"}
-                  >
-                    {plan.buttonText}
-                    <ArrowRight className="ml-2 h-4 w-4 transform transition-transform duration-300 group-hover/button:translate-x-1" />
-                  </Button>
-                  <div className="space-y-4">
-                    {plan.features.map((feature, featureIndex) => (
-                      <div 
-                        key={featureIndex} 
-                        className="flex items-center text-sm group/feature"
-                      >
-                        <div className={`
-                          flex-shrink-0 h-5 w-5 rounded-full 
-                          ${plan.popular ? 'bg-gradient-to-r from-purple-500/80 to-blue-500/80 shadow-sm shadow-purple-500/20' : 'bg-white/10'} 
-                          flex items-center justify-center mr-3 
-                          group-hover/feature:scale-110 transition-transform duration-300
-                        `}>
-                          <Check className="h-3 w-3 text-white" />
-                        </div>
-                        <span className="text-gray-100 group-hover/feature:text-white transition-colors duration-200">{feature}</span>
+                )}
+                <Card 
+                  className={`
+                    relative theme-card
+                    ${plan.popular ? 'border-purple-500/50 bg-gradient-to-br from-purple-500/[0.15] to-blue-500/[0.15]' : 'border-foreground/10'} 
+                    hover:border-foreground/20 transition-all duration-300 h-full 
+                    transform hover:scale-[1.02] hover:shadow-xl hover:shadow-purple-500/10
+                    ${hoveredPlan === plan.name ? 'scale-[1.02]' : 'scale-100'}
+                  `}
+                >
+                  <CardHeader className="relative space-y-6 pb-8">
+                    <div className="flex items-center space-x-4">
+                      <div className={`p-3 rounded-lg ${plan.popular ? 'bg-gradient-to-r from-purple-500/80 to-blue-500/80 shadow-lg shadow-purple-500/20' : 'bg-foreground/10'} transform transition-transform duration-300 group-hover:scale-105`}>
+                        <plan.icon className="h-6 w-6 text-foreground" />
                       </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          ))}
+                      <div>
+                        <CardTitle className="text-2xl font-bold text-foreground/90">{plan.name}</CardTitle>
+                        <CardDescription className="text-foreground/70 text-base">{plan.description}</CardDescription>
+                      </div>
+                    </div>
+                    <div className="flex items-baseline">
+                      {plan.price === "Free" ? (
+                        <span className="text-4xl font-bold text-foreground/90">Free</span>
+                      ) : (
+                        <>
+                          <span className="text-sm font-medium mr-2 text-foreground/70">£</span>
+                          <span className="text-4xl font-bold text-foreground/90">{plan.price}</span>
+                          <span className="text-foreground/70 ml-2 text-base">{plan.period}</span>
+                        </>
+                      )}
+                    </div>
+                  </CardHeader>
+                  <CardContent className="relative space-y-8">
+                    <Button 
+                      className={`
+                        w-full ${plan.buttonColor} transform transition-all duration-300 
+                        hover:scale-[1.02] h-12 group/button font-semibold text-foreground/90 shadow-lg shadow-purple-500/20
+                        ${hoveredPlan === plan.name ? 'scale-[1.02]' : 'scale-100'}
+                        ${isLoading === plan.name.toLowerCase() ? 'opacity-50 cursor-not-allowed' : ''}
+                      `}
+                      variant={plan.popular ? "default" : "outline"}
+                      onClick={() => handleSubscribe(plan.name.toLowerCase())}
+                      disabled={isLoading === plan.name.toLowerCase()}
+                    >
+                      {isLoading === plan.name.toLowerCase() ? (
+                        <div className="flex items-center">
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Processing...
+                        </div>
+                      ) : (
+                        <>
+                          {plan.buttonText}
+                          <ArrowRight className="ml-2 h-4 w-4 transform transition-transform duration-300 group-hover/button:translate-x-1" />
+                        </>
+                      )}
+                    </Button>
+                    <div className="space-y-5">
+                      {plan.features.map((feature, featureIndex) => (
+                        <div 
+                          key={featureIndex} 
+                          className="flex items-center text-base group/feature"
+                        >
+                          <div className={`
+                            flex-shrink-0 h-5 w-5 rounded-full 
+                            ${plan.popular ? 'bg-gradient-to-r from-purple-500/80 to-blue-500/80 shadow-sm shadow-purple-500/20' : 'bg-foreground/10'} 
+                            flex items-center justify-center mr-3 
+                            group-hover/feature:scale-105 transition-transform duration-300
+                          `}>
+                            <Check className="h-3 w-3 text-foreground/90" />
+                          </div>
+                          <span className="text-foreground/80 group-hover/feature:text-foreground/90 transition-colors duration-200">{feature}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            ))}
+          </div>
         </div>
 
         {/* Enhanced Features Section */}
         <div className="mt-32 max-w-7xl mx-auto">
-          <h2 className="text-3xl font-bold text-center mb-16 bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
+          <h2 className="text-3xl font-bold text-center mb-16 theme-gradient-text-1">
             Why Choose Our Platform?
           </h2>
           <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
@@ -245,13 +274,13 @@ export default function PricingPage() {
               }
             ].map((feature, index) => (
               <div key={index} className="group relative">
-                <div className="absolute inset-0 bg-gradient-to-br from-${feature.color}-500/10 to-${feature.color}-500/5 rounded-xl opacity-0 group-hover:opacity-100 transition-all duration-500" />
-                <div className="relative text-center space-y-4 p-6 rounded-xl border border-white/10 hover:border-white/20 transition-all duration-500 group-hover:transform group-hover:scale-105">
+                <div className={`absolute inset-0 bg-gradient-to-br from-${feature.color}-500/10 to-${feature.color}-500/5 rounded-xl opacity-0 group-hover:opacity-100 transition-all duration-500`} />
+                <div className="relative text-center space-y-4 p-6 rounded-xl border border-foreground/10 hover:border-foreground/20 transition-all duration-500 group-hover:transform group-hover:scale-105">
                   <div className={`w-12 h-12 mx-auto rounded-full bg-${feature.color}-500/10 flex items-center justify-center group-hover:scale-110 transition-transform duration-500`}>
                     <feature.icon className={`h-6 w-6 text-${feature.color}-400`} />
                   </div>
-                  <h3 className="font-semibold text-lg">{feature.title}</h3>
-                  <p className="text-sm text-gray-400 group-hover:text-gray-300 transition-colors">{feature.description}</p>
+                  <h3 className="font-semibold text-lg text-foreground">{feature.title}</h3>
+                  <p className="text-sm text-foreground/60 group-hover:text-foreground/80 transition-colors">{feature.description}</p>
                 </div>
               </div>
             ))}
@@ -260,7 +289,7 @@ export default function PricingPage() {
 
         {/* Enhanced FAQ Section */}
         <div className="mt-32 max-w-3xl mx-auto">
-          <h2 className="text-3xl font-bold text-center mb-16 bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
+          <h2 className="text-3xl font-bold text-center mb-16 theme-gradient-text-1">
             Frequently Asked Questions
           </h2>
           <div className="space-y-4">
@@ -280,13 +309,13 @@ export default function PricingPage() {
             ].map((faq, index) => (
               <div 
                 key={index} 
-                className="group p-6 rounded-xl border border-white/10 hover:border-white/20 transition-all duration-300 hover:bg-white/5 cursor-pointer"
+                className="group p-6 rounded-xl border border-foreground/10 hover:border-foreground/20 transition-all duration-300 hover:bg-foreground/5 cursor-pointer"
               >
                 <div className="flex justify-between items-center">
                   <h3 className="font-semibold text-lg group-hover:text-purple-400 transition-colors">{faq.question}</h3>
                   <ArrowRight className="h-4 w-4 transform transition-transform duration-300 group-hover:translate-x-1" />
                 </div>
-                <p className="mt-2 text-gray-400 group-hover:text-gray-300 transition-colors">{faq.answer}</p>
+                <p className="mt-2 text-foreground/60 group-hover:text-foreground/80 transition-colors">{faq.answer}</p>
               </div>
             ))}
           </div>
@@ -294,16 +323,13 @@ export default function PricingPage() {
 
         {/* Enhanced CTA Section */}
         <div className="mt-32 relative">
-          <div className="absolute inset-0 bg-gradient-to-r from-purple-500/10 via-blue-500/5 to-purple-500/10 animate-gradient" />
-          <div className="absolute inset-0" style={{
-            backgroundImage: 'radial-gradient(circle at center, rgba(255,255,255,0.1) 1px, transparent 1px)',
-            backgroundSize: '20px 20px'
-          }} />
+          <div className="absolute inset-0 theme-gradient-bg animate-gradient" />
+          <div className="absolute inset-0 theme-dot-pattern" />
           <div className="relative mx-auto max-w-[920px] text-center space-y-8 py-16">
-            <h2 className="text-3xl font-bold sm:text-4xl bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
+            <h2 className="text-3xl font-bold sm:text-4xl theme-gradient-text-1">
               Ready to transform your study experience?
             </h2>
-            <p className="text-gray-400 max-w-[600px] mx-auto text-lg">
+            <p className="text-foreground/60 max-w-[600px] mx-auto text-lg">
               Join thousands of students who are already using StudyMind to enhance their learning journey.
             </p>
             <div className="mt-8 flex items-center justify-center space-x-4">
@@ -317,22 +343,22 @@ export default function PricingPage() {
               <Button 
                 size="lg"
                 variant="outline" 
-                className="h-14 px-8 text-lg border-white/10 hover:bg-white/5 transform hover:scale-105 transition-all group"
+                className="h-14 px-8 text-lg border-foreground/10 hover:bg-foreground/5 transform hover:scale-105 transition-all group"
               >
                 View Demo
                 <ArrowRight className="ml-2 h-5 w-5 transform transition-transform duration-300 group-hover:translate-x-1" />
               </Button>
             </div>
-            <div className="pt-8 flex justify-center items-center space-x-8 text-sm text-gray-400">
-              <div className="flex items-center group hover:text-white transition-colors">
+            <div className="pt-8 flex justify-center items-center space-x-8 text-sm text-foreground/60">
+              <div className="flex items-center group hover:text-foreground transition-colors">
                 <Clock className="h-4 w-4 mr-2 group-hover:text-purple-400 transition-colors" />
                 <span>14-day free trial</span>
               </div>
-              <div className="flex items-center group hover:text-white transition-colors">
+              <div className="flex items-center group hover:text-foreground transition-colors">
                 <Shield className="h-4 w-4 mr-2 group-hover:text-purple-400 transition-colors" />
                 <span>No credit card required</span>
               </div>
-              <div className="flex items-center group hover:text-white transition-colors">
+              <div className="flex items-center group hover:text-foreground transition-colors">
                 <Users className="h-4 w-4 mr-2 group-hover:text-purple-400 transition-colors" />
                 <span>50K+ active users</span>
               </div>

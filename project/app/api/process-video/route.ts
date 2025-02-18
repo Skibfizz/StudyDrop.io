@@ -1,67 +1,65 @@
-import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
+  baseURL: "https://api.openai.com/v1"
 });
+
+export const dynamic = 'force-dynamic';
 
 export async function POST(req: Request) {
   try {
     const { text } = await req.json();
 
     if (!text) {
-      return NextResponse.json({ error: 'No text provided' }, { status: 400 });
+      return new Response(JSON.stringify({ error: 'Text content is required' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
     }
 
-    // Generate summary with OpenAI
-    const summaryResponse = await openai.chat.completions.create({
-      model: "gpt-4",
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o-mini-2024-07-18",
+      temperature: 0.7,
       messages: [
         {
           role: "system",
-          content: "You are a helpful AI tutor. Create a concise summary of the following text."
+          content: `You are an expert at creating educational summaries. Your task is to analyze video transcripts and create comprehensive study materials. Format your response in markdown.
+
+Your analysis should include:
+1. A concise executive summary (2-3 sentences)
+2. Main Topics & Key Points (bullet points)
+3. Important Concepts & Definitions
+4. Study Notes & Explanations
+5. Potential Quiz Questions`
         },
         {
           role: "user",
-          content: text
+          content: `Please analyze this video transcript and create study materials:
+
+${text}`
         }
       ]
     });
 
-    // Generate flashcards with OpenAI
-    const flashcardsResponse = await openai.chat.completions.create({
-      model: "gpt-4",
-      messages: [
-        {
-          role: "system",
-          content: "Create 5-10 study flashcards from the following text. Format as JSON array with 'question' and 'answer' fields."
-        },
-        {
-          role: "user",
-          content: text
-        }
-      ]
+    const summary = completion.choices[0]?.message?.content || "Failed to generate summary";
+
+    return new Response(JSON.stringify({ 
+      success: true,
+      summary
+    }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
     });
-
-    const summary = summaryResponse.choices[0]?.message?.content || '';
-    const flashcardsText = flashcardsResponse.choices[0]?.message?.content || '[]';
-    const flashcards = JSON.parse(flashcardsText);
-
-    return NextResponse.json({
-      summary,
-      flashcards: flashcards.map((card: any, index: number) => ({
-        id: index.toString(),
-        question: card.question,
-        answer: card.answer,
-        isFlipped: false
-      }))
+  } catch (error) {
+    console.error('Error in process-video API:', error);
+    return new Response(JSON.stringify({ 
+      success: false,
+      error: 'Failed to process video',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
     });
-
-  } catch (error: any) {
-    console.error('Error processing text:', error);
-    return NextResponse.json(
-      { error: error.message || 'Failed to process text' },
-      { status: 500 }
-    );
   }
 } 

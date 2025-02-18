@@ -1,6 +1,26 @@
 {
-  "version": 3,
+  "sortedMiddleware": [],
   "middleware": {},
-  "functions": {},
-  "sortedMiddleware": []
+  "functions": {
+    "/api/humanize/route": {
+      "files": [
+        "server/middleware-build-manifest.js",
+        "server/middleware-react-loadable-manifest.js",
+        "server/next-font-manifest.js",
+        "server/edge-runtime-webpack.js",
+        "server/app/api/humanize/route.js"
+      ],
+      "name": "app/api/humanize/route",
+      "page": "/api/humanize/route",
+      "matchers": [
+        {
+          "regexp": "^/api/humanize$",
+          "originalSource": "/api/humanize"
+        }
+      ],
+      "wasm": [],
+      "assets": []
+    }
+  },
+  "version": 2
 }
