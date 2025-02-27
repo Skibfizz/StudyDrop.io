@@ -13,9 +13,9 @@
     "lru-cache": "^10.2.0"
   },
   "scripts": {
-    "build": "cd project && npm install && npm run build",
-    "start": "cd project && npm start",
-    "dev": "cd project && npm run dev"
+    "build": "next build",
+    "start": "next start",
+    "dev": "next dev"
   },
   "engines": {
     "node": ">=18.x"
