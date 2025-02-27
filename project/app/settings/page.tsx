@@ -4,135 +4,70 @@ import { MainNav } from "@/components/main-nav";
 import { UserNav } from "@/components/user-nav";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
-import { 
-  Bell, 
-  Mail, 
-  Lock,
-  Smartphone,
-  Globe,
-  Clock
-} from "lucide-react";
+import { LogOut } from "lucide-react";
+import { signOut } from "next-auth/react";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 export default function SettingsPage() {
+  const handleSignOut = async () => {
+    await signOut({ callbackUrl: "/" });
+  };
+
   return (
     <div className="flex min-h-screen flex-col">
-      <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <header className="fixed top-0 z-50 w-full theme-header">
         <div className="flex h-14 items-center px-6">
           <MainNav />
           <div className="ml-auto flex items-center space-x-4">
+            <ThemeToggle />
             <UserNav />
           </div>
         </div>
       </header>
 
-      <main className="flex-1 space-y-8 p-8 pt-6">
-        <div className="flex items-center justify-between space-y-2">
-          <h2 className="text-3xl font-bold tracking-tight">Settings</h2>
-        </div>
+      {/* Background Pattern */}
+      <div className="fixed inset-0 bg-[#F8F8FC]" style={{
+        backgroundImage: 'radial-gradient(circle at center, rgba(120, 119, 198, 0.05) 0.25px, transparent 0.25px)',
+        backgroundSize: '12px 12px'
+      }} />
 
-        <div className="grid gap-6">
-          {/* Notifications Settings */}
-          <Card className="p-6">
-            <h3 className="text-lg font-semibold mb-4">Notifications</h3>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-4">
-                  <Bell className="h-5 w-5 text-purple-500" />
-                  <div>
-                    <Label>Push Notifications</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Receive notifications about your study progress
-                    </p>
-                  </div>
-                </div>
-                <Switch />
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-4">
-                  <Mail className="h-5 w-5 text-blue-500" />
-                  <div>
-                    <Label>Email Notifications</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Receive email updates about your account
-                    </p>
-                  </div>
-                </div>
-                <Switch />
-              </div>
-            </div>
-          </Card>
-
-          {/* Privacy Settings */}
-          <Card className="p-6">
-            <h3 className="text-lg font-semibold mb-4">Privacy & Security</h3>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-4">
-                  <Lock className="h-5 w-5 text-green-500" />
-                  <div>
-                    <Label>Two-Factor Authentication</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Add an extra layer of security to your account
-                    </p>
-                  </div>
-                </div>
-                <Switch />
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-4">
-                  <Globe className="h-5 w-5 text-orange-500" />
-                  <div>
-                    <Label>Public Profile</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Make your profile visible to other users
-                    </p>
-                  </div>
-                </div>
-                <Switch />
-              </div>
-            </div>
-          </Card>
-
-          {/* Preferences */}
-          <Card className="p-6">
-            <h3 className="text-lg font-semibold mb-4">Preferences</h3>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-4">
-                  <Clock className="h-5 w-5 text-indigo-500" />
-                  <div>
-                    <Label>Study Session Reminders</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Get reminded about scheduled study sessions
-                    </p>
-                  </div>
-                </div>
-                <Switch />
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-4">
-                  <Smartphone className="h-5 w-5 text-pink-500" />
-                  <div>
-                    <Label>Mobile Notifications</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Receive notifications on your mobile device
-                    </p>
-                  </div>
-                </div>
-                <Switch />
-              </div>
-            </div>
-          </Card>
-
-          {/* Actions */}
-          <div className="flex justify-end space-x-4">
-            <Button variant="outline">Cancel</Button>
-            <Button className="bg-purple-500 hover:bg-purple-600">
-              Save Changes
-            </Button>
+      <main className="flex-1 pt-24">
+        <div className="max-w-4xl mx-auto p-6 space-y-8">
+          {/* Header Section */}
+          <div className="text-center space-y-4">
+            <h1 className="text-3xl font-bold tracking-tight">
+              <span className="bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-blue-600">
+                Settings
+              </span>
+            </h1>
+            <p className="text-muted-foreground max-w-2xl mx-auto">
+              Manage your account settings
+            </p>
           </div>
+
+          {/* Sign Out Card */}
+          <Card className="p-8 bg-white/80 backdrop-blur-sm border-purple-500/10">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                <div className="p-3 rounded-full bg-red-100">
+                  <LogOut className="h-6 w-6 text-red-500" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold">Sign Out</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Sign out from your account
+                  </p>
+                </div>
+              </div>
+              <Button 
+                variant="destructive" 
+                className="bg-red-500 hover:bg-red-600 text-white"
+                onClick={handleSignOut}
+              >
+                Sign Out
+              </Button>
+            </div>
+          </Card>
         </div>
       </main>
     </div>

@@ -5,6 +5,11 @@ import { NextResponse } from 'next/server';
 
 export async function POST(req: Request) {
   try {
+    // Check if Stripe API key is configured
+    if (!process.env.STRIPE_SECRET_KEY) {
+      return new NextResponse('Stripe API key not configured', { status: 503 });
+    }
+
     const session = await getServerSession(authOptions);
 
     if (!session?.user) {
@@ -18,10 +23,15 @@ export async function POST(req: Request) {
       return new NextResponse('Invalid plan', { status: 400 });
     }
 
+    // Check if price ID is configured
+    if (!plan.priceId) {
+      return new NextResponse('Stripe price ID not configured for this plan', { status: 503 });
+    }
+
     // Create a checkout session
     const stripeSession = await stripe.checkout.sessions.create({
-      success_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard?success=true&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/pricing?canceled=true`,
+      success_url: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/dashboard?success=true&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/pricing?canceled=true`,
       customer_email: session.user.email!,
       mode: 'subscription',
       payment_method_types: ['card'],

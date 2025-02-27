@@ -809,28 +809,6 @@ export default function ChatPage() {
                       ))}
                     </div>
                   </Card>
-
-                  <Card className="p-6 bg-white/80 backdrop-blur-sm border-purple-500/10">
-                    <h2 className="text-xl font-semibold mb-4">Quick Actions</h2>
-                    <div className="grid grid-cols-2 gap-4">
-                      <Button className="bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600">
-                        <Sparkles className="h-4 w-4 mr-2" />
-                        Create New Deck
-                      </Button>
-                      <Button variant="outline">
-                        <Brain className="h-4 w-4 mr-2" />
-                        Import Cards
-                      </Button>
-                      <Button variant="outline">
-                        <Sliders className="h-4 w-4 mr-2" />
-                        Settings
-                      </Button>
-                      <Button variant="outline">
-                        <ArrowRight className="h-4 w-4 mr-2" />
-                        View All
-                      </Button>
-                    </div>
-                  </Card>
                 </div>
               </div>
             </div>
@@ -1041,36 +1019,6 @@ export default function ChatPage() {
                       )}
                     </div>
                   </Card>
-
-                  {/* History Card */}
-                  {outputText && (
-                    <Card className="p-4 bg-white/80 backdrop-blur-sm border-purple-500/10">
-                      <div className="flex items-center justify-between mb-3">
-                        <h3 className="font-medium text-gray-900">Recent Humanizations</h3>
-                        <Button variant="ghost" size="sm" className="text-purple-500 hover:text-purple-600 text-sm">
-                          View All
-                        </Button>
-                      </div>
-                      <div className="space-y-2">
-                        {[1, 2].map((_, i) => (
-                          <div key={i} className="p-2 rounded-lg hover:bg-purple-500/5 transition-colors cursor-pointer">
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center space-x-3">
-                                <div className="w-8 h-8 rounded-lg bg-purple-500/10 flex items-center justify-center">
-                                  <Sparkles className="h-4 w-4 text-purple-500" />
-                                </div>
-                                <div>
-                                  <div className="text-sm font-medium text-gray-700">Text Enhancement #{i + 1}</div>
-                                  <div className="text-xs text-gray-500">2 mins ago</div>
-                                </div>
-                              </div>
-                              <ChevronRight className="h-4 w-4 text-gray-400" />
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </Card>
-                  )}
                 </div>
               </div>
             </div>

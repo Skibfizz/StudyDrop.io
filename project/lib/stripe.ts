@@ -1,37 +1,40 @@
 import Stripe from 'stripe';
 
-export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2023-10-16',
+// Use a dummy key if STRIPE_SECRET_KEY is not available
+const stripeSecretKey = process.env.STRIPE_SECRET_KEY || 'dummy_key_for_build_process';
+
+export const stripe = new Stripe(stripeSecretKey, {
+  apiVersion: '2025-01-27.acacia',
   typescript: true,
 });
 
 export const PLANS = {
   basic: {
-    priceId: process.env.STRIPE_BASIC_PRICE_ID!,
     name: 'Basic',
-    price: 1.99,
-    interval: 'week',
-    currency: 'gbp',
+    description: 'Perfect for getting started',
     features: [
-      "20 Summarised Video lectures",
-      "20 Flashcard Sets (300)",
-      "40 Text humanizations",
-      "B1 Generation Speed"
-    ]
+      'Access to AI-powered study tools',
+      'Basic flashcard creation',
+      'Limited YouTube video processing',
+      'Email support',
+    ],
+    price: 9.99,
+    priceId: process.env.STRIPE_BASIC_PRICE_ID || 'price_placeholder',
   },
   pro: {
-    priceId: process.env.STRIPE_PRO_PRICE_ID!,
     name: 'Pro',
-    price: 3.99,
-    interval: 'week',
-    currency: 'gbp',
+    description: 'For serious learners',
     features: [
-      "1000 Summarised Video Lectures",
-      "1000 FlashCard Sets (15k)",
-      "500 Text Humanizations",
-      "A1-Super Generation Speed"
-    ]
-  }
+      'All Basic features',
+      'Unlimited flashcard creation',
+      'Advanced YouTube video processing',
+      'Priority support',
+      'Custom study plans',
+      'Progress analytics',
+    ],
+    price: 19.99,
+    priceId: process.env.STRIPE_PRO_PRICE_ID || 'price_placeholder',
+  },
 } as const;
 
 export type PlanType = keyof typeof PLANS; 

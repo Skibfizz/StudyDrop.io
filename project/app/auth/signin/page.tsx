@@ -1,43 +1,49 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
-import { BookOpen, Brain, Sparkles, Shield } from "lucide-react";
-import Link from "next/link";
-import { MainNav } from "@/components/main-nav";
-import { ThemeToggle } from "@/components/theme-toggle";
-import { signIn, useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import Link from 'next/link'
+import { BookOpen, Brain, Sparkles, Shield } from "lucide-react"
+import { MainNav } from "@/components/main-nav"
+import { ThemeToggle } from "@/components/theme-toggle"
+import { signInWithEmail, signInWithGoogle } from '@/lib/supabase'
 
 export default function SignIn() {
-  const { data: session, status } = useSession();
-  const router = useRouter();
-
-  useEffect(() => {
-    if (session) {
-      router.push('/dashboard');
-    }
-  }, [session, router]);
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
+  const router = useRouter()
 
   const handleGoogleSignIn = async () => {
     try {
-      await signIn('google', { callbackUrl: '/dashboard' });
-    } catch (error) {
-      console.error('Error signing in with Google:', error);
+      setError(null)
+      setLoading(true)
+      await signInWithGoogle()
+      // The redirect will be handled by Supabase
+    } catch (error: any) {
+      setError(error.message || 'Failed to sign in with Google')
+      setLoading(false)
     }
-  };
+  }
 
-  if (status === "loading") {
-    return (
-      <div className="min-h-screen w-full flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500"></div>
-      </div>
-    );
+  const handleEmailSignIn = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError(null)
+    setLoading(true)
+
+    try {
+      await signInWithEmail(email, password)
+      // Redirect to dashboard after successful sign-in
+      router.push('/dashboard')
+    } catch (err: any) {
+      setError(err.message)
+      setLoading(false)
+    }
   }
 
   return (
     <div className="min-h-screen w-full flex flex-col relative overflow-hidden bg-background text-foreground">
-      {/* Header matching home page */}
       <header className="fixed top-0 z-50 w-full theme-header">
         <div className="flex h-14 items-center px-6">
           <MainNav />
@@ -47,16 +53,12 @@ export default function SignIn() {
         </div>
       </header>
 
-      {/* Main Content */}
       <div className="flex-1 flex items-center justify-center relative pt-16">
-        {/* Subtle Background */}
         <div className="absolute inset-0 bg-gradient-to-br from-purple-500/[0.02] to-blue-500/[0.02]" />
         
-        {/* Main Content Container */}
         <div className="relative w-full max-w-[420px] mx-auto p-6">
           <div className="theme-card p-8">
             <div className="space-y-8">
-              {/* Logo & Header */}
               <div className="text-center">
                 <div className="inline-flex items-center justify-center mb-6">
                   <BookOpen className="h-8 w-8 text-purple-500" />
@@ -69,14 +71,14 @@ export default function SignIn() {
                   Welcome back
                 </h1>
                 <p className="text-muted-foreground text-sm">
-                  Sign in to your account to continue learning
+                  Sign in to continue your learning journey
                 </p>
               </div>
 
-              {/* Sign In Button */}
-              <Button
+              <button
                 className="w-full h-11 bg-white hover:bg-gray-50 text-gray-600 transition-all border border-border hover:border-border/80 rounded-lg flex items-center justify-center group"
                 onClick={handleGoogleSignIn}
+                disabled={loading}
               >
                 <svg className="mr-2 h-5 w-5" viewBox="0 0 24 24">
                   <path
@@ -98,9 +100,69 @@ export default function SignIn() {
                 </svg>
                 Continue with Google
                 <span className="ml-2 group-hover:translate-x-1 transition-transform">→</span>
-              </Button>
+              </button>
 
-              {/* Features List */}
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-border"></div>
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-background px-2 text-muted-foreground">Or continue with</span>
+                </div>
+              </div>
+
+              <form className="space-y-6" onSubmit={handleEmailSignIn}>
+                {error && (
+                  <div className="bg-red-50 p-4 rounded-md">
+                    <p className="text-red-800">{error}</p>
+                  </div>
+                )}
+                <div className="rounded-md shadow-sm -space-y-px">
+                  <div>
+                    <label htmlFor="email-address" className="sr-only">
+                      Email address
+                    </label>
+                    <input
+                      id="email-address"
+                      name="email"
+                      type="email"
+                      autoComplete="email"
+                      required
+                      className="appearance-none rounded-t-md relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+                      placeholder="Email address"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="password" className="sr-only">
+                      Password
+                    </label>
+                    <input
+                      id="password"
+                      name="password"
+                      type="password"
+                      autoComplete="current-password"
+                      required
+                      className="appearance-none rounded-b-md relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+                      placeholder="Password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500"
+                  >
+                    {loading ? 'Signing in...' : 'Sign in'}
+                  </button>
+                </div>
+              </form>
+
               <div className="space-y-3">
                 <div className="flex items-center space-x-3 text-sm text-muted-foreground">
                   <Brain className="h-4 w-4 text-purple-500" />
@@ -116,7 +178,12 @@ export default function SignIn() {
                 </div>
               </div>
 
-              {/* Terms */}
+              <div className="text-sm text-center">
+                <Link href="/auth/signup" className="font-medium text-purple-600 hover:text-purple-500">
+                  Don't have an account? Sign up
+                </Link>
+              </div>
+
               <div className="text-center text-xs text-muted-foreground">
                 By continuing, you agree to our{" "}
                 <Link href="#" className="text-purple-500 hover:underline">
@@ -132,5 +199,5 @@ export default function SignIn() {
         </div>
       </div>
     </div>
-  );
+  )
 } 

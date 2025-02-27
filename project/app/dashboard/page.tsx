@@ -9,7 +9,6 @@ import {
   Brain, 
   Sparkles,
   Youtube,
-  FileText,
   ChevronRight,
   Rocket,
   Star,
@@ -18,8 +17,20 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { FeatureUsage } from "@/components/dashboard/feature-usage";
+import { TierInfo } from "@/components/dashboard/tier-info";
+import { SubscriptionCard } from "@/components/dashboard/subscription-card";
+import { useUsage } from "@/lib/hooks/use-usage";
+import { useEffect } from "react";
 
 export default function DashboardPage() {
+  const { refresh } = useUsage();
+
+  // Refresh usage data when dashboard page mounts
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
+
   const features = [
     {
       title: "Video Learning",
@@ -72,9 +83,9 @@ export default function DashboardPage() {
       </header>
 
       <main className="flex-1">
-        {/* Enhanced Hero Section */}
+        {/* Hero Section */}
         <section className="relative px-6 pt-24 pb-16">
-          {/* Enhanced Background */}
+          {/* Background */}
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_120%,rgba(120,119,198,0.15),rgba(255,255,255,0))]" />
           <div className="absolute inset-0 bg-gradient-to-br from-purple-500/[0.08] via-blue-500/[0.05] to-purple-500/[0.08]" />
           <div 
@@ -117,34 +128,21 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            {/* Quick Stats */}
-            <div className="mt-16 grid grid-cols-4 gap-8">
-              {[
-                { icon: Users, label: "Active Users", value: "50K+", color: "text-purple-500" },
-                { icon: Star, label: "Average Rating", value: "4.9/5", color: "text-yellow-500" },
-                { icon: Clock, label: "Study Hours", value: "1M+", color: "text-blue-500" },
-                { icon: Rocket, label: "Success Rate", value: "95%", color: "text-green-500" }
-              ].map((stat, index) => (
-                <div key={index} className="relative group">
-                  <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-blue-500/10 rounded-xl opacity-0 group-hover:opacity-100 transition-all duration-500" />
-                  <Card className="border-border/40 p-6 backdrop-blur-sm bg-white/50">
-                    <div className="flex items-center space-x-4">
-                      <div className="p-3 rounded-xl bg-white/80">
-                        <stat.icon className={`h-6 w-6 ${stat.color}`} />
-                      </div>
-                      <div>
-                        <div className="text-2xl font-bold">{stat.value}</div>
-                        <div className="text-sm text-muted-foreground">{stat.label}</div>
-                      </div>
-                    </div>
-                  </Card>
-                </div>
-              ))}
+            {/* Feature Usage and Tier Info */}
+            <div className="mt-16 grid grid-cols-1 lg:grid-cols-4 gap-8">
+              <div className="col-span-1 lg:col-span-3">
+                <h2 className="text-xl font-semibold mb-4">Feature Usage</h2>
+                <FeatureUsage />
+              </div>
+              <div className="col-span-1">
+                <h2 className="text-xl font-semibold mb-4">Subscription</h2>
+                <SubscriptionCard />
+              </div>
             </div>
           </div>
         </section>
 
-        {/* Enhanced Features Section */}
+        {/* Features Section */}
         <section className="px-6 py-16">
           <div className="max-w-7xl mx-auto space-y-12">
             <div className="text-center space-y-4">
@@ -198,7 +196,7 @@ export default function DashboardPage() {
           </div>
         </section>
 
-        {/* Enhanced Quick Start Guide */}
+        {/* Quick Start Guide */}
         <section className="px-6 pb-16">
           <div className="max-w-7xl mx-auto">
             <Card className="relative overflow-hidden border-border/40 p-8 backdrop-blur-sm bg-white/50">
@@ -207,36 +205,19 @@ export default function DashboardPage() {
                 <div className="p-4 rounded-xl bg-white/80 backdrop-blur">
                   <Rocket className="h-8 w-8 text-purple-500" />
                 </div>
-                <div className="flex-1 space-y-4">
-                  <div>
-                    <h3 className="text-2xl font-bold">Quick Start Guide</h3>
-                    <p className="text-muted-foreground mt-2">
-                      New to StudyMind? Follow these steps to get started with your learning journey.
-                    </p>
+                <div className="space-y-2">
+                  <h3 className="text-xl font-bold">Quick Start Guide</h3>
+                  <p className="text-muted-foreground">
+                    New to StudyMind? Follow these steps to get started with our AI-powered learning tools.
+                  </p>
+                  <div className="flex space-x-4 mt-4">
+                    <Button variant="outline" className="border-purple-500/20 hover:border-purple-500/40">
+                      View Tutorial
+                    </Button>
+                    <Button className="bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white">
+                      Start Learning
+                    </Button>
                   </div>
-                  <div className="grid md:grid-cols-3 gap-6">
-                    {[
-                      { step: "1", title: "Upload Materials", desc: "Start by uploading your study materials or lecture videos" },
-                      { step: "2", title: "AI Processing", desc: "Our AI will analyze and organize your content" },
-                      { step: "3", title: "Start Learning", desc: "Begin your enhanced learning experience" }
-                    ].map((item) => (
-                      <div key={item.step} className="relative group">
-                        <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-blue-500/10 rounded-lg opacity-0 group-hover:opacity-100 transition-all duration-300" />
-                        <div className="relative p-4 rounded-lg border border-border/40">
-                          <div className="text-sm font-medium text-purple-500 mb-2">Step {item.step}</div>
-                          <div className="font-semibold mb-1">{item.title}</div>
-                          <div className="text-sm text-muted-foreground">{item.desc}</div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  <Button 
-                    variant="link" 
-                    className="p-0 h-auto text-purple-500 hover:text-purple-600 group"
-                  >
-                    Learn more about our features
-                    <ChevronRight className="ml-1 h-4 w-4 transform transition-transform group-hover:translate-x-1" />
-                  </Button>
                 </div>
               </div>
             </Card>

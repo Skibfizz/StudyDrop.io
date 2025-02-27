@@ -1,0 +1,195 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@keyframes float {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+  100% { transform: translateY(0px); }
+}
+
+/* Flashcard styles */
+.backface-hidden {
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  transform-style: preserve-3d;
+}
+
+.rotate-y-180 {
+  transform: rotateY(180deg);
+}
+
+.perspective-1000 {
+  perspective: 1000px;
+}
+
+.transform-style-3d {
+  transform-style: preserve-3d;
+}
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+    --primary: 221.2 83.2% 53.3%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 221.2 83.2% 53.3%;
+    --radius: 0.5rem;
+    
+    /* Custom theme variables */
+    --header-bg: 0 0% 100%;
+    --header-border: 0 0% 90%;
+    --dot-pattern: rgba(0, 0, 0, 0.1);
+    --gradient-start: rgba(79, 70, 229, 0.1);
+    --gradient-mid: rgba(59, 130, 246, 0.05);
+    --gradient-end: rgba(255, 255, 255, 0);
+    --card-hover: rgba(0, 0, 0, 0.02);
+    --feature-card-border: rgba(0, 0, 0, 0.1);
+    --feature-card-bg: rgba(255, 255, 255, 0.5);
+    --text-gradient-1: linear-gradient(to right, #4F46E5, #7C3AED, #2563EB);
+    --text-gradient-2: linear-gradient(to right, #6366F1, #4F46E5);
+    --pricing-card-bg: rgba(255, 255, 255, 0.8);
+    --pricing-card-border: rgba(0, 0, 0, 0.1);
+    --pricing-card-hover: rgba(0, 0, 0, 0.03);
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* Hide scrollbar for Chrome, Safari and Opera */
+::-webkit-scrollbar {
+  display: none;
+}
+
+/* Hide scrollbar for IE, Edge and Firefox */
+* {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+/* Theme-aware utility classes */
+.theme-header {
+  @apply border-b backdrop-blur supports-[backdrop-filter]:bg-background/60;
+  border-color: hsl(var(--header-border));
+  background-color: hsl(var(--header-bg));
+}
+
+.theme-dot-pattern {
+  background-image: radial-gradient(circle at center, var(--dot-pattern) 1px, transparent 1px);
+  background-size: 50px 50px;
+}
+
+.theme-gradient-bg {
+  background: linear-gradient(to bottom, var(--gradient-start), var(--gradient-mid), var(--gradient-end));
+}
+
+.theme-card {
+  @apply border rounded-2xl transition-all duration-300;
+  background-color: var(--feature-card-bg);
+  border-color: var(--feature-card-border);
+}
+
+.theme-card:hover {
+  background-color: var(--card-hover);
+}
+
+/* Custom Styles */
+.font-heading {
+  letter-spacing: -0.03em;
+}
+
+.floating {
+  animation: float 6s ease-in-out infinite;
+}
+
+/* Gradient Text Animation */
+@keyframes gradient {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.animate-gradient {
+  background-size: 200% 200%;
+  animation: gradient 8s ease infinite;
+}
+
+/* Theme transition */
+* {
+  transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
+}
+
+/* Card styles */
+.card {
+  @apply bg-background border-[1px];
+}
+
+/* Button styles */
+.button-primary {
+  @apply bg-foreground text-background hover:bg-foreground/90;
+}
+
+.button-outline {
+  @apply border-[1px] border-foreground/10 hover:bg-foreground/5;
+}
+
+/* Text colors */
+.text-primary {
+  @apply text-foreground;
+}
+
+.text-secondary {
+  @apply text-foreground/60;
+}
+
+.text-muted {
+  @apply text-foreground/40;
+}
+
+/* Theme-aware text gradients */
+.theme-gradient-text-1 {
+  background: var(--text-gradient-1);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.theme-gradient-text-2 {
+  background: var(--text-gradient-2);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Pricing card styles */
+.theme-pricing-card {
+  @apply border rounded-xl transition-all duration-300;
+  background-color: var(--pricing-card-bg);
+  border-color: var(--pricing-card-border);
+}
+
+.theme-pricing-card:hover {
+  background-color: var(--pricing-card-hover);
+  transform: translateY(-2px);
+}

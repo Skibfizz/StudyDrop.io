@@ -1,0 +1,9 @@
+// This file is the main entry point for the Pages Router
+export default function Home() {
+  return (
+    <div>
+      <h1>Welcome to Study Mind</h1>
+      <p>Your application is now working!</p>
+    </div>
+  );
+} 
