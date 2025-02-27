@@ -591,13 +591,6 @@ export default function ChatPage() {
                               </>
                             )}
                           </Button>
-                          <Button
-                            variant="outline"
-                            className="col-span-2 flex w-full items-center justify-center border-purple-100 bg-white py-3 text-gray-700 transition-all hover:border-purple-200 hover:bg-purple-50/50"
-                          >
-                            <Sparkles className="mr-2 h-4 w-4 text-purple-500" />
-                            <span>Key Insights</span>
-                          </Button>
                         </div>
 
                         {/* Recent Lectures Section */}
@@ -1092,7 +1085,7 @@ export default function ChatPage() {
                                 >
                                   {isProcessing ? (
                                     <>
-                                      <Loader2 className="mr-2 h-4 animate-spin" />
+                                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                                       Processing...
                                     </>
                                   ) : (

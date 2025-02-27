@@ -484,13 +484,6 @@ export default function ChatPage() {
                               </>
                             )}
                           </Button>
-                          <Button 
-                            variant="outline"
-                            className="w-full py-3 flex items-center justify-center bg-white hover:bg-purple-50/50 text-gray-700 border-purple-100 hover:border-purple-200 transition-all col-span-2"
-                          >
-                            <Sparkles className="h-4 w-4 mr-2 text-purple-500" />
-                            <span>Key Insights</span>
-                          </Button>
                         </div>
 
                         {/* Recent Lectures Section */}
