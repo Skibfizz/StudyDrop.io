@@ -16,5 +16,8 @@
     "build": "cd project && npm install && npm run build",
     "start": "cd project && npm start",
     "dev": "cd project && npm run dev"
+  },
+  "engines": {
+    "node": ">=18.x"
   }
 } 
