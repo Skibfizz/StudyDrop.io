@@ -11,6 +11,8 @@ import { User, Mail, Camera, Upload } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useState, useEffect } from "react";
 import { useToast } from "@/components/ui/use-toast";
+import { getAvatarGradient, getInitials } from "@/lib/avatar-utils";
+import { SharedHeader } from "@/components/shared-header";
 
 export default function ProfilePage() {
   const { data: session } = useSession();
@@ -35,17 +37,15 @@ export default function ProfilePage() {
     });
   };
 
+  // Generate avatar data
+  const displayName = session?.user?.name || "User";
+  const initials = getInitials(displayName);
+  // We'll use the site's signature gradient directly instead of a dynamic one
+  // const gradient = getAvatarGradient(displayName);
+
   return (
     <div className="flex min-h-screen flex-col">
-      <header className="fixed top-0 z-50 w-full theme-header">
-        <div className="flex h-14 items-center px-6">
-          <MainNav />
-          <div className="ml-auto flex items-center space-x-4">
-            <ThemeToggle />
-            <UserNav />
-          </div>
-        </div>
-      </header>
+      <SharedHeader />
 
       {/* Background Pattern */}
       <div className="fixed inset-0 bg-[#F8F8FC]" style={{
@@ -79,25 +79,10 @@ export default function ProfilePage() {
                 <div className="flex items-center space-x-8">
                   <div className="relative group">
                     <div className="h-24 w-24 rounded-full overflow-hidden ring-4 ring-purple-50 ring-offset-2">
-                      {session?.user?.image ? (
-                        <img
-                          src={session.user.image}
-                          alt={session.user.name || "Profile"}
-                          className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-110"
-                        />
-                      ) : (
-                        <div className="h-full w-full flex items-center justify-center bg-purple-100">
-                          <User className="h-12 w-12 text-purple-500" />
-                        </div>
-                      )}
+                      <div className="h-full w-full flex items-center justify-center bg-gradient-to-br from-purple-500 to-blue-500 text-white text-2xl font-medium">
+                        {initials}
+                      </div>
                     </div>
-                    <Button
-                      size="icon"
-                      variant="outline"
-                      className="absolute -bottom-2 -right-2 h-8 w-8 rounded-full bg-white hover:bg-purple-50 border-purple-100 hover:border-purple-200 transition-all shadow-lg"
-                    >
-                      <Camera className="h-4 w-4 text-purple-500" />
-                    </Button>
                   </div>
                   <div className="space-y-1">
                     <h3 className="text-xl font-semibold bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-blue-600">
@@ -105,14 +90,10 @@ export default function ProfilePage() {
                     </h3>
                     <p className="text-sm text-muted-foreground">{session?.user?.email || "your.email@example.com"}</p>
                     <p className="text-xs text-muted-foreground mt-2">
-                      Supported formats: JPEG, PNG, GIF. Maximum file size: 5MB.
+                      We use text-based avatars to save storage space.
                     </p>
                   </div>
                 </div>
-                <Button variant="outline" className="space-x-2 h-10">
-                  <Upload className="h-4 w-4 text-purple-500" />
-                  <span>Upload New</span>
-                </Button>
               </div>
 
               {/* Profile Form */}

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { LogOut } from "lucide-react";
 import { signOut } from "next-auth/react";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { SharedHeader } from "@/components/shared-header";
 
 export default function SettingsPage() {
   const handleSignOut = async () => {
@@ -15,15 +16,7 @@ export default function SettingsPage() {
 
   return (
     <div className="flex min-h-screen flex-col">
-      <header className="fixed top-0 z-50 w-full theme-header">
-        <div className="flex h-14 items-center px-6">
-          <MainNav />
-          <div className="ml-auto flex items-center space-x-4">
-            <ThemeToggle />
-            <UserNav />
-          </div>
-        </div>
-      </header>
+      <SharedHeader />
 
       {/* Background Pattern */}
       <div className="fixed inset-0 bg-[#F8F8FC]" style={{

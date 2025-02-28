@@ -1,9 +1,14 @@
 import * as React from "react"
 
 import type {
-  ToastActionElement,
   ToastProps,
 } from "@/components/ui/toast"
+
+// Define ToastActionElement type directly here
+type ToastActionElement = React.ReactElement<{
+  altText: string;
+  onClick: () => void;
+}>
 
 const TOAST_LIMIT = 1
 const TOAST_REMOVE_DELAY = 1000000

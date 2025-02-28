@@ -30,6 +30,7 @@ import { useRouter } from "next/navigation";
 import { Textarea } from "@/components/ui/textarea";
 import ReactMarkdown from "react-markdown";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { SharedHeader } from "@/components/shared-header";
 
 interface Flashcard {
   id: string;
@@ -289,15 +290,7 @@ export default function ChatPage() {
 
   return (
     <div className="flex min-h-screen flex-col">
-      <header className="fixed top-0 z-50 w-full theme-header">
-        <div className="flex h-14 items-center px-6">
-          <MainNav />
-          <div className="ml-auto flex items-center space-x-4">
-            <ThemeToggle />
-            <UserNav />
-          </div>
-        </div>
-      </header>
+      <SharedHeader />
 
       {/* Updated background pattern */}
       <div className="fixed inset-0 bg-[#F8F8FC]" style={{
@@ -960,23 +953,6 @@ export default function ChatPage() {
                         {outputText ? (
                           <div className="space-y-4">
                             <p className="text-gray-700 whitespace-pre-wrap text-base leading-relaxed">{outputText}</p>
-                            {/* Enhancement Metrics */}
-                            <div className="mt-6 pt-6 border-t border-purple-500/10">
-                              <div className="grid grid-cols-3 gap-4">
-                                <div className="text-center p-3 rounded-lg bg-purple-500/5">
-                                  <div className="text-lg font-semibold text-purple-600">98%</div>
-                                  <div className="text-xs text-gray-500">Readability</div>
-                                </div>
-                                <div className="text-center p-3 rounded-lg bg-blue-500/5">
-                                  <div className="text-lg font-semibold text-blue-600">Natural</div>
-                                  <div className="text-xs text-gray-500">Tone</div>
-                                </div>
-                                <div className="text-center p-3 rounded-lg bg-green-500/5">
-                                  <div className="text-lg font-semibold text-green-600">High</div>
-                                  <div className="text-xs text-gray-500">Engagement</div>
-                                </div>
-                              </div>
-                            </div>
                           </div>
                         ) : (
                           <div className="absolute inset-0 flex items-center justify-center">

@@ -1,4 +1,6 @@
 import OpenAI from 'openai';
+import { createServerClient } from '@supabase/ssr';
+import { cookies } from 'next/headers';
 
 export const runtime = 'experimental-edge';
 export const dynamic = 'force-dynamic';
@@ -6,6 +8,61 @@ export const dynamic = 'force-dynamic';
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
+
+// Create Supabase server client
+async function createSupabaseServerClient() {
+  const cookieStore = cookies();
+  return createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return cookieStore.getAll();
+        },
+        setAll(cookiesToSet) {
+          try {
+            cookiesToSet.forEach(({ name, value, options }) =>
+              cookieStore.set(name, value, options)
+            );
+          } catch {
+            // The `setAll` method was called from a Server Component.
+            // This can be ignored if you have middleware refreshing
+            // user sessions.
+          }
+        },
+      },
+    }
+  );
+}
+
+// Function to increment usage only after successful API response
+async function incrementUsage(userId: string) {
+  try {
+    if (!userId) {
+      console.log('No user ID provided for usage tracking');
+      return;
+    }
+
+    const supabase = await createSupabaseServerClient();
+    const { data, error } = await supabase.rpc(
+      'check_and_increment_usage',
+      {
+        p_user_id: userId,
+        p_usage_type: 'text_humanizations',
+        p_increment: 1
+      }
+    );
+
+    if (error) {
+      console.error('Error incrementing usage:', error);
+    } else {
+      console.log('Usage incremented successfully:', data);
+    }
+  } catch (error) {
+    console.error('Failed to increment usage:', error);
+  }
+}
 
 const STYLE_PROMPTS = {
   casual: `You're a 20-year-old psychology major helping edit your friend's paper at 1 AM. You're sprawled on your dorm bed, surrounded by empty Red Bull cans and half-eaten pizza. Your eyes are burning from staring at screens all day, and you keep checking your phone between edits. You type like you talk - with lots of "like", "y'know", and sometimes you trail off mid-thought... Your brain is fuzzy from the caffeine crash but you still want to help.
@@ -235,6 +292,15 @@ export async function POST(req: Request) {
     let processedText = text;
     for (let round = 1; round <= 2; round++) {
       processedText = await processRound(processedText, round, style as WritingStyle, inputLength);
+    }
+
+    // Get the current user
+    const supabase = await createSupabaseServerClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    // Only increment usage after successful API response
+    if (user) {
+      await incrementUsage(user.id);
     }
 
     return new Response(JSON.stringify({ improvedText: processedText }), {

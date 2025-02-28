@@ -1,6 +1,6 @@
 {
-  "buildCommand": "cd project/project && npm install && npm run build",
-  "outputDirectory": "project/project/.next",
-  "installCommand": "cd project/project && npm install",
+  "buildCommand": "cd project && npm install && npm run build",
+  "outputDirectory": "project/.next",
+  "installCommand": "cd project && npm install",
   "framework": "nextjs"
 } 

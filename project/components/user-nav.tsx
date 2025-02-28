@@ -10,8 +10,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useAuth } from "@/lib/hooks/useAuth";
+import { getAvatarGradient, getInitials } from "@/lib/avatar-utils";
 import { 
   User, 
   Settings, 
@@ -50,15 +51,18 @@ export function UserNav() {
   // Get user display info from Supabase user metadata
   const userMetadata = user.user_metadata || {};
   const displayName = userMetadata.full_name || userMetadata.username || user.email?.split('@')[0] || 'User';
-  const avatarUrl = userMetadata.avatar_url;
+  
+  // Generate initials for the avatar
+  const initials = getInitials(displayName);
+  // We'll use the site's signature gradient directly
+  // const gradient = getAvatarGradient(displayName);
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="relative h-8 w-8 rounded-full">
           <Avatar className="h-8 w-8">
-            <AvatarImage src={avatarUrl} alt={displayName} />
-            <AvatarFallback>{displayName[0].toUpperCase()}</AvatarFallback>
+            <AvatarFallback>{initials}</AvatarFallback>
           </Avatar>
         </Button>
       </DropdownMenuTrigger>
@@ -93,8 +97,8 @@ export function UserNav() {
           </DropdownMenuItem>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={handleSignOut} className="text-red-600 focus:text-red-600">
-          <LogOut className="mr-2 h-4 w-4" />
+        <DropdownMenuItem onClick={handleSignOut}>
+          <LogOut className="mr-2 h-4 w-4 text-red-500" />
           <span>Log out</span>
         </DropdownMenuItem>
       </DropdownMenuContent>

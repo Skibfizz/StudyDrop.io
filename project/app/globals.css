@@ -70,10 +70,10 @@
 
 @layer base {
   * {
-    @apply border-border;
+    @apply border-[hsl(var(--border))];
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-[hsl(var(--background))] text-[hsl(var(--foreground))];
   }
 }
 
@@ -90,7 +90,7 @@
 
 /* Theme-aware utility classes */
 .theme-header {
-  @apply border-b backdrop-blur supports-[backdrop-filter]:bg-background/60;
+  @apply border-b backdrop-blur supports-[backdrop-filter]:bg-[hsl(var(--background))]/60;
   border-color: hsl(var(--header-border));
   background-color: hsl(var(--header-bg));
 }
@@ -142,29 +142,29 @@
 
 /* Card styles */
 .card {
-  @apply bg-background border-[1px];
+  @apply bg-[hsl(var(--background))] border-[1px];
 }
 
 /* Button styles */
 .button-primary {
-  @apply bg-foreground text-background hover:bg-foreground/90;
+  @apply bg-[hsl(var(--foreground))] text-[hsl(var(--background))] hover:bg-[hsl(var(--foreground))]/90;
 }
 
 .button-outline {
-  @apply border-[1px] border-foreground/10 hover:bg-foreground/5;
+  @apply border-[1px] border-[hsl(var(--foreground))]/10 hover:bg-[hsl(var(--foreground))]/5;
 }
 
 /* Text colors */
 .text-primary {
-  @apply text-foreground;
+  @apply text-[hsl(var(--foreground))];
 }
 
 .text-secondary {
-  @apply text-foreground/60;
+  @apply text-[hsl(var(--foreground))]/60;
 }
 
 .text-muted {
-  @apply text-foreground/40;
+  @apply text-[hsl(var(--foreground))]/40;
 }
 
 /* Theme-aware text gradients */

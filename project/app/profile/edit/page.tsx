@@ -23,10 +23,13 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
+import { getAvatarGradient, getInitials } from "@/lib/avatar-utils";
+import { SharedHeader } from "@/components/shared-header";
 
 export default function EditProfilePage() {
   const [isLoading, setIsLoading] = useState(false);
-  const [profileImage, setProfileImage] = useState("https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=256&h=256&fit=crop&crop=faces");
+  const [name, setName] = useState("Alex Johnson");
+  const [email, setEmail] = useState("alex.johnson@example.com");
 
   const handleSave = async () => {
     setIsLoading(true);
@@ -35,17 +38,14 @@ export default function EditProfilePage() {
     setIsLoading(false);
   };
 
+  // Generate avatar data
+  const initials = getInitials(name);
+  // We'll use the site's signature gradient directly instead of a dynamic one
+  // const gradient = getAvatarGradient(name);
+
   return (
     <div className="flex min-h-screen flex-col bg-black text-white">
-      <header className="sticky top-0 z-50 w-full border-b border-white/10 bg-black/95 backdrop-blur supports-[backdrop-filter]:bg-black/60">
-        <div className="flex h-14 items-center px-6">
-          <MainNav />
-          <div className="ml-auto flex items-center space-x-4">
-            <ThemeToggle />
-            <UserNav />
-          </div>
-        </div>
-      </header>
+      <SharedHeader />
 
       <div className="flex-1 space-y-8 p-8 pt-6">
         {/* Header with gradient background */}
@@ -91,45 +91,23 @@ export default function EditProfilePage() {
           <Card className="group relative rounded-xl bg-black border border-white/10 hover:border-white/20 transition-all duration-300">
             <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-purple-500/10 to-blue-500/10 opacity-0 transition-opacity group-hover:opacity-100" />
             <CardHeader className="relative">
-              <CardTitle className="text-white/90 group-hover:text-white transition-colors">Profile Picture</CardTitle>
-              <CardDescription className="text-white/60">Update your profile picture</CardDescription>
+              <CardTitle className="text-white/90 group-hover:text-white transition-colors">Profile</CardTitle>
+              <CardDescription className="text-white/60">Your profile information</CardDescription>
             </CardHeader>
             <CardContent className="relative">
               <div className="flex flex-col items-center space-y-4">
-                <div className="relative group/img">
-                  <div className="h-32 w-32 overflow-hidden rounded-full border-4 border-white/10 transition-all duration-300 group-hover/img:border-purple-500/50 group-hover/img:shadow-lg group-hover/img:shadow-purple-500/20">
-                    <div className="relative h-full w-full">
-                      <Image
-                        src={profileImage}
-                        alt="Profile picture"
-                        fill
-                        className="object-cover"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-br from-purple-500/20 to-blue-500/20 opacity-0 group-hover/img:opacity-100 transition-opacity" />
+                <div className="relative">
+                  <div className="h-32 w-32 overflow-hidden rounded-full border-4 border-white/10 transition-all duration-300 group-hover:border-purple-500/50 group-hover:shadow-lg group-hover:shadow-purple-500/20">
+                    <div className="h-full w-full flex items-center justify-center bg-gradient-to-br from-purple-500 to-blue-500 text-white text-3xl font-medium">
+                      {initials}
                     </div>
                   </div>
-                  <Button 
-                    className="absolute bottom-0 right-0 h-8 w-8 rounded-full bg-gradient-to-r from-purple-500 to-blue-500 p-0 hover:from-purple-600 hover:to-blue-600 transition-all transform translate-y-2 opacity-0 group-hover/img:translate-y-0 group-hover/img:opacity-100 shadow-lg"
-                  >
-                    <Camera className="h-4 w-4" />
-                    <input
-                      type="file"
-                      className="absolute inset-0 opacity-0 cursor-pointer"
-                      accept="image/*"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) {
-                          const reader = new FileReader();
-                          reader.onloadend = () => {
-                            setProfileImage(reader.result as string);
-                          };
-                          reader.readAsDataURL(file);
-                        }
-                      }}
-                    />
-                  </Button>
                 </div>
-                <p className="text-sm text-white/60 group-hover:text-white/80 transition-colors">Click the camera icon to upload a new photo</p>
+                <div className="text-center">
+                  <p className="text-sm text-white/60">
+                    We use text-based avatars to save storage space.
+                  </p>
+                </div>
               </div>
             </CardContent>
           </Card>

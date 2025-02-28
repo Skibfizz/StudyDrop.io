@@ -2,6 +2,8 @@ import { exec } from 'child_process';
 import { promisify } from 'util';
 import path from 'path';
 import OpenAI from 'openai';
+import { createServerClient } from '@supabase/ssr';
+import { cookies } from 'next/headers';
 
 const execAsync = promisify(exec);
 const openai = new OpenAI({
@@ -10,6 +12,33 @@ const openai = new OpenAI({
 });
 
 export const dynamic = 'force-dynamic';
+
+// Create Supabase server client
+async function createSupabaseServerClient() {
+  const cookieStore = cookies();
+  return createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return cookieStore.getAll();
+        },
+        setAll(cookiesToSet) {
+          try {
+            cookiesToSet.forEach(({ name, value, options }) =>
+              cookieStore.set(name, value, options)
+            );
+          } catch {
+            // The `setAll` method was called from a Server Component.
+            // This can be ignored if you have middleware refreshing
+            // user sessions.
+          }
+        },
+      },
+    }
+  );
+}
 
 function extractVideoId(url: string) {
   const regExp = /^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#&?]*).*/;
@@ -123,6 +152,34 @@ async function getTranscript(videoId: string) {
   }
 }
 
+// Function to increment usage only after successful API response
+async function incrementUsage(userId: string) {
+  try {
+    if (!userId) {
+      console.log('No user ID provided for usage tracking');
+      return;
+    }
+
+    const supabase = await createSupabaseServerClient();
+    const { data, error } = await supabase.rpc(
+      'check_and_increment_usage',
+      {
+        p_user_id: userId,
+        p_usage_type: 'video_summaries',
+        p_increment: 1
+      }
+    );
+
+    if (error) {
+      console.error('Error incrementing usage:', error);
+    } else {
+      console.log('Usage incremented successfully:', data);
+    }
+  } catch (error) {
+    console.error('Failed to increment usage:', error);
+  }
+}
+
 export async function POST(req: Request) {
   try {
     const { url } = await req.json();
@@ -147,6 +204,15 @@ export async function POST(req: Request) {
     
     // Process with AI
     const analysis = await processTranscriptWithAI(transcriptData);
+
+    // Get the current user
+    const supabase = await createSupabaseServerClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    // Only increment usage after successful API response
+    if (user) {
+      await incrementUsage(user.id);
+    }
 
     return new Response(JSON.stringify({ 
       success: true,

@@ -7,6 +7,7 @@ import { BookOpen, Brain, Sparkles, Shield } from "lucide-react"
 import { MainNav } from "@/components/main-nav"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { signUpWithEmail, signInWithGoogle } from '@/lib/supabase'
+import { SharedHeader } from "@/components/shared-header";
 
 export default function SignUp() {
   const [email, setEmail] = useState('')
@@ -45,14 +46,7 @@ export default function SignUp() {
 
   return (
     <div className="min-h-screen w-full flex flex-col relative overflow-hidden bg-background text-foreground">
-      <header className="fixed top-0 z-50 w-full theme-header">
-        <div className="flex h-14 items-center px-6">
-          <MainNav />
-          <div className="ml-auto flex items-center space-x-4">
-            <ThemeToggle />
-          </div>
-        </div>
-      </header>
+      <SharedHeader />
 
       <div className="flex-1 flex items-center justify-center relative pt-16">
         <div className="absolute inset-0 bg-gradient-to-br from-purple-500/[0.02] to-blue-500/[0.02]" />

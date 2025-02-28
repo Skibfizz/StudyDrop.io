@@ -9,6 +9,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
+import { SharedHeader } from "@/components/shared-header";
 
 export default function Home() {
   const router = useRouter();
@@ -68,15 +69,7 @@ export default function Home() {
 
   return (
     <div className="flex min-h-screen flex-col bg-background text-foreground">
-      <header className="fixed top-0 z-50 w-full theme-header">
-        <div className="flex h-14 items-center px-6">
-          <MainNav />
-          <div className="ml-auto flex items-center space-x-4">
-            <ThemeToggle />
-            <UserNav />
-          </div>
-        </div>
-      </header>
+      <SharedHeader />
       
       <main className="flex-1">
         {/* Hero Section */}

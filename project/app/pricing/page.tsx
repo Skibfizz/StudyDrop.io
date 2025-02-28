@@ -14,6 +14,7 @@ import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import { SharedHeader } from "@/components/shared-header";
 
 export default function PricingPage() {
   const [isLoading, setIsLoading] = useState<string | null>(null);
@@ -110,15 +111,7 @@ export default function PricingPage() {
 
   return (
     <div className="flex min-h-screen flex-col">
-      <header className="fixed top-0 z-50 w-full theme-header">
-        <div className="flex h-14 items-center px-6">
-          <MainNav />
-          <div className="ml-auto flex items-center space-x-4">
-            <ThemeToggle />
-            <UserNav />
-          </div>
-        </div>
-      </header>
+      <SharedHeader />
 
       <div className="flex-1">
         {/* Enhanced Header with Gradient Animation */}

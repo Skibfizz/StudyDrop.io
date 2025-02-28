@@ -1,0 +1,14 @@
+warning: in the working copy of 'package.json', LF will be replaced by CRLF the next time Git touches it
+[1mdiff --git a/package.json b/package.json[m
+[1mindex 99021d22..c16c9f2b 100644[m
+[1m--- a/package.json[m
+[1m+++ b/package.json[m
+[36m@@ -6,6 +6,8 @@[m
+     "next": "14.1.0",[m
+     "@supabase/ssr": "^0.5.2",[m
+     "eslint": "^8.57.0",[m
+[32m+[m[32m    "@eslint/object-schema": "^2.0.0",[m
+[32m+[m[32m    "@eslint/config-array": "^0.0.4",[m
+     "glob": "^10.3.10",[m
+     "rimraf": "^5.0.5",[m
+     "lru-cache": "^10.2.0"[m

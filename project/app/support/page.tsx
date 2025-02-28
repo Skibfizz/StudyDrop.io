@@ -1,26 +1,16 @@
 "use client";
 
-import { MainNav } from "@/components/main-nav";
-import { UserNav } from "@/components/user-nav";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { ThemeToggle } from "@/components/theme-toggle";
+import { SharedHeader } from "@/components/shared-header";
 
 export default function SupportPage() {
   return (
     <div className="flex min-h-screen flex-col">
-      <header className="fixed top-0 z-50 w-full theme-header">
-        <div className="flex h-14 items-center px-6">
-          <MainNav />
-          <div className="ml-auto flex items-center space-x-4">
-            <ThemeToggle />
-            <UserNav />
-          </div>
-        </div>
-      </header>
+      <SharedHeader />
 
       <main className="flex-1 space-y-8">
         {/* Enhanced Hero Section */}

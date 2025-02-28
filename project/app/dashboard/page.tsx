@@ -22,6 +22,7 @@ import { TierInfo } from "@/components/dashboard/tier-info";
 import { SubscriptionCard } from "@/components/dashboard/subscription-card";
 import { useUsage } from "@/lib/hooks/use-usage";
 import { useEffect } from "react";
+import { SharedHeader } from "@/components/shared-header";
 
 export default function DashboardPage() {
   const { refresh } = useUsage();
@@ -72,15 +73,7 @@ export default function DashboardPage() {
 
   return (
     <div className="flex min-h-screen flex-col">
-      <header className="fixed top-0 z-50 w-full theme-header">
-        <div className="flex h-14 items-center px-6">
-          <MainNav />
-          <div className="ml-auto flex items-center space-x-4">
-            <ThemeToggle />
-            <UserNav />
-          </div>
-        </div>
-      </header>
+      <SharedHeader />
 
       <main className="flex-1">
         {/* Hero Section */}
