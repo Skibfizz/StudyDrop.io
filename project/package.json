@@ -57,8 +57,6 @@
     "embla-carousel-react": "^8.3.0",
     "eslint": "^8.57.0",
     "eslint-config-next": "14.1.0",
-    "@eslint/object-schema": "^2.0.0",
-    "@eslint/config-array": "^0.0.4",
     "glob": "^10.3.10",
     "input-otp": "^1.2.4",
     "lru-cache": "^10.2.0",
