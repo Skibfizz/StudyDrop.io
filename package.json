@@ -7,7 +7,7 @@
     "@supabase/ssr": "^0.5.2",
     "eslint": "^8.57.0",
     "@eslint/object-schema": "^2.0.0",
-    "@eslint/config-array": "^0.1.0",
+    "@eslint/config-array": "^0.0.4",
     "glob": "^10.3.10",
     "rimraf": "^5.0.5",
     "lru-cache": "^10.2.0"
