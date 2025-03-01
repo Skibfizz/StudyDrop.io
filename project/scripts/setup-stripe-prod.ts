@@ -80,7 +80,7 @@ async function setupStripeProd() {
           mode: 'at_period_end',
           proration_behavior: 'none',
         },
-        subscription_pause: {
+        subscription_update: {
           enabled: false,
         },
       },
