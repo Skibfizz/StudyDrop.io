@@ -56,24 +56,38 @@ export default function YouTubeLearningPage() {
   const { checkAndIncrementUsage } = useUsage();
   const { user } = useSupabase();
 
-  // Fetch recent lectures on component mount or when a new video is processed
-  useEffect(() => {
-    const fetchRecentLectures = async () => {
-      if (user) {
-        setIsLoadingLectures(true);
-        try {
-          const lectures = await getRecentLectures(user.id);
-          setRecentLectures(lectures);
-        } catch (error) {
-          console.error('Error fetching recent lectures:', error);
-        } finally {
-          setIsLoadingLectures(false);
-        }
-      }
-    };
+  // Function to fetch recent lectures
+  const fetchRecentLectures = async () => {
+    if (!user) return;
+    
+    setIsLoadingLectures(true);
+    try {
+      // Always fetch exactly 3 recent lectures
+      const lectures = await getRecentLectures(user.id, 3);
+      setRecentLectures(lectures);
+    } catch (error) {
+      console.error('Error fetching recent lectures:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load recent lectures",
+        variant: "error"
+      });
+    } finally {
+      setIsLoadingLectures(false);
+    }
+  };
 
+  // Fetch recent lectures on component mount or when user changes
+  useEffect(() => {
     fetchRecentLectures();
-  }, [user, videoData]); // Add videoData as a dependency to refresh when a new video is processed
+  }, [user]);
+  
+  // Refresh lectures after processing a new video
+  useEffect(() => {
+    if (videoData) {
+      fetchRecentLectures();
+    }
+  }, [videoData]);
 
   // Load lecture details when a lecture is clicked
   const handleLectureClick = async (lecture: any) => {
@@ -167,8 +181,7 @@ export default function YouTubeLearningPage() {
         await saveVideoSummary(user.id, data);
         
         // Refresh the recent lectures list
-        const lectures = await getRecentLectures(user.id);
-        setRecentLectures(lectures);
+        await fetchRecentLectures();
       }
       
       // Start typing animation
@@ -420,7 +433,23 @@ export default function YouTubeLearningPage() {
           )}
 
           <Card className="p-6 bg-white/80 backdrop-blur-sm border-purple-500/10">
-            <h2 className="text-xl font-semibold mb-4">Recent Lectures</h2>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold">Recent Lectures</h2>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={fetchRecentLectures}
+                disabled={isLoadingLectures}
+                className="h-8 px-2"
+              >
+                {isLoadingLectures ? (
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                ) : (
+                  <RefreshCcw className="h-4 w-4" />
+                )}
+                <span className="sr-only">Refresh</span>
+              </Button>
+            </div>
             <div className="space-y-2">
               {isLoadingLectures ? (
                 <div className="py-8 flex justify-center">

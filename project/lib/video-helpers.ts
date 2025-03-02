@@ -45,15 +45,22 @@ export const saveVideoSummary = async (
  * Get recent lectures for the current user
  */
 export const getRecentLectures = async (userId: string, limit: number = 3) => {
+  if (!userId) return [];
+  
   try {
+    // Ensure limit is at least 3 but not more than 10 for performance
+    const safeLimit = Math.max(3, Math.min(limit, 10));
+    
     const { data, error } = await supabase
       .rpc('get_recent_lectures', {
         p_user_id: userId,
-        p_limit: limit
+        p_limit: safeLimit
       });
 
     if (error) throw error;
-    return data;
+    
+    // Ensure we're returning an array even if the data is null
+    return Array.isArray(data) ? data : [];
   } catch (error) {
     console.error('Error fetching recent lectures:', error);
     return [];
