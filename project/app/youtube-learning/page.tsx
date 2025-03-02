@@ -68,8 +68,26 @@ export default function YouTubeLearningPage() {
     try {
       // Always fetch exactly 3 recent lectures
       const lectures = await getRecentLectures(user.id, 3);
-      console.log('Fetched lectures:', lectures);
-      setRecentLectures(lectures);
+      console.log('Fetched lectures:', lectures, 'Length:', lectures.length);
+      
+      // Force a re-render by creating a new array
+      setRecentLectures([...lectures]);
+      
+      // If we just processed a video but it's not in the list, try fetching again after a delay
+      if (videoData && lectures.length > 0 && !lectures.some(lecture => lecture.video_id === videoData.videoId)) {
+        console.log('Recently processed video not found in lectures, will retry in 2 seconds');
+        setTimeout(() => {
+          console.log('Retrying lecture fetch');
+          getRecentLectures(user.id, 3).then(refreshedLectures => {
+            console.log('Retry fetched lectures:', refreshedLectures);
+            setRecentLectures([...refreshedLectures]);
+            setIsLoadingLectures(false);
+          }).catch(err => {
+            console.error('Error in retry fetch:', err);
+            setIsLoadingLectures(false);
+          });
+        }, 2000);
+      }
     } catch (error) {
       console.error('Error fetching recent lectures:', error);
       toast({
@@ -188,9 +206,23 @@ export default function YouTubeLearningPage() {
           const savedData = await saveVideoSummary(user.id, data);
           console.log('Video summary saved successfully:', savedData);
           
+          // Set a flag to indicate we just saved a new video
+          const justSavedVideoId = data.videoId;
+          
           // Refresh the recent lectures list
           console.log('Refreshing recent lectures after save');
           await fetchRecentLectures();
+          
+          // Double-check if the newly saved video is in the list
+          setTimeout(() => {
+            console.log('Checking if newly saved video is in the list');
+            if (!recentLectures.some(lecture => lecture.video_id === justSavedVideoId)) {
+              console.log('Newly saved video not found in list, forcing another refresh');
+              fetchRecentLectures();
+            } else {
+              console.log('Newly saved video found in list');
+            }
+          }, 1000);
         } catch (saveError) {
           console.error('Error saving video summary:', saveError);
           toast({

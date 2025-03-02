@@ -61,21 +61,48 @@ export const getRecentLectures = async (userId: string, limit: number = 3) => {
     const safeLimit = Math.max(3, Math.min(limit, 10));
     console.log('Using safeLimit:', safeLimit);
     
-    const { data, error } = await supabase
+    // First try using the RPC function
+    const { data: rpcData, error: rpcError } = await supabase
       .rpc('get_recent_lectures', {
         p_user_id: userId,
         p_limit: safeLimit
       });
 
-    if (error) {
-      console.error('Supabase error fetching recent lectures:', error);
-      throw error;
+    if (rpcError) {
+      console.error('Supabase RPC error fetching recent lectures:', rpcError);
+      
+      // Fallback to direct query if RPC fails
+      console.log('Falling back to direct query');
+      const { data: queryData, error: queryError } = await supabase
+        .from('content')
+        .select('id, title, content, created_at')
+        .eq('user_id', userId)
+        .eq('type', 'video')
+        .order('created_at', { ascending: false })
+        .limit(safeLimit);
+      
+      if (queryError) {
+        console.error('Supabase query error fetching recent lectures:', queryError);
+        throw queryError;
+      }
+      
+      // Transform the data to match the RPC function output
+      const transformedData = queryData.map(item => ({
+        id: item.id,
+        title: item.title,
+        video_id: item.content?.videoId || '',
+        duration: item.content?.duration || '',
+        created_at: item.created_at
+      }));
+      
+      console.log('Fetched lectures data via direct query:', transformedData);
+      return transformedData;
     }
     
-    console.log('Fetched lectures data:', data);
+    console.log('Fetched lectures data via RPC:', rpcData);
     
     // Ensure we're returning an array even if the data is null
-    return Array.isArray(data) ? data : [];
+    return Array.isArray(rpcData) ? rpcData : [];
   } catch (error) {
     console.error('Error fetching recent lectures:', error);
     return [];
