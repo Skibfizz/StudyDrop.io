@@ -58,12 +58,17 @@ export default function YouTubeLearningPage() {
 
   // Function to fetch recent lectures
   const fetchRecentLectures = async () => {
-    if (!user) return;
+    if (!user) {
+      console.log('No user found, skipping lecture fetch');
+      return;
+    }
     
+    console.log('Fetching recent lectures for user:', user.id);
     setIsLoadingLectures(true);
     try {
       // Always fetch exactly 3 recent lectures
       const lectures = await getRecentLectures(user.id, 3);
+      console.log('Fetched lectures:', lectures);
       setRecentLectures(lectures);
     } catch (error) {
       console.error('Error fetching recent lectures:', error);
@@ -178,10 +183,24 @@ export default function YouTubeLearningPage() {
       
       // Save the video summary to the database
       if (user && data) {
-        await saveVideoSummary(user.id, data);
-        
-        // Refresh the recent lectures list
-        await fetchRecentLectures();
+        console.log('Saving video summary for user:', user.id);
+        try {
+          const savedData = await saveVideoSummary(user.id, data);
+          console.log('Video summary saved successfully:', savedData);
+          
+          // Refresh the recent lectures list
+          console.log('Refreshing recent lectures after save');
+          await fetchRecentLectures();
+        } catch (saveError) {
+          console.error('Error saving video summary:', saveError);
+          toast({
+            title: "Warning",
+            description: "Video processed but could not be saved to your history",
+            variant: "error"
+          });
+        }
+      } else {
+        console.log('Cannot save video summary:', { user: !!user, data: !!data });
       }
       
       // Start typing animation

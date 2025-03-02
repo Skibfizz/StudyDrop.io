@@ -13,6 +13,7 @@ export const saveVideoSummary = async (
     transcript: string;
   }
 ) => {
+  console.log('saveVideoSummary called with userId:', userId, 'videoId:', videoData.videoId);
   try {
     const { data, error } = await supabase
       .from('content')
@@ -33,7 +34,11 @@ export const saveVideoSummary = async (
       .select('id')
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('Supabase error saving video summary:', error);
+      throw error;
+    }
+    console.log('Video summary saved successfully with id:', data?.id);
     return data;
   } catch (error) {
     console.error('Error saving video summary:', error);
@@ -45,11 +50,16 @@ export const saveVideoSummary = async (
  * Get recent lectures for the current user
  */
 export const getRecentLectures = async (userId: string, limit: number = 3) => {
-  if (!userId) return [];
+  console.log('getRecentLectures called with userId:', userId, 'limit:', limit);
+  if (!userId) {
+    console.log('No userId provided, returning empty array');
+    return [];
+  }
   
   try {
     // Ensure limit is at least 3 but not more than 10 for performance
     const safeLimit = Math.max(3, Math.min(limit, 10));
+    console.log('Using safeLimit:', safeLimit);
     
     const { data, error } = await supabase
       .rpc('get_recent_lectures', {
@@ -57,7 +67,12 @@ export const getRecentLectures = async (userId: string, limit: number = 3) => {
         p_limit: safeLimit
       });
 
-    if (error) throw error;
+    if (error) {
+      console.error('Supabase error fetching recent lectures:', error);
+      throw error;
+    }
+    
+    console.log('Fetched lectures data:', data);
     
     // Ensure we're returning an array even if the data is null
     return Array.isArray(data) ? data : [];
