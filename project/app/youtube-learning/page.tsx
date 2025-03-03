@@ -179,7 +179,14 @@ export default function YouTubeLearningPage() {
 
     // Check usage limits before processing
     const canProceed = await checkAndIncrementUsage('video_summaries');
-    if (!canProceed) return;
+    if (!canProceed) {
+      toast({
+        title: "Usage Limit Reached",
+        description: "You've reached your video summaries limit. Please upgrade your plan for more access.",
+        variant: "error"
+      });
+      return;
+    }
 
     setIsLoading(true);
     try {
@@ -267,7 +274,14 @@ export default function YouTubeLearningPage() {
 
     // Check usage limits before regenerating
     const canProceed = await checkAndIncrementUsage('video_summaries');
-    if (!canProceed) return;
+    if (!canProceed) {
+      toast({
+        title: "Usage Limit Reached",
+        description: "You've reached your video summaries limit. Please upgrade your plan for more access.",
+        variant: "error"
+      });
+      return;
+    }
 
     setIsLoading(true);
     try {
@@ -322,7 +336,14 @@ export default function YouTubeLearningPage() {
 
     // Check usage limits before generating flashcards
     const canProceed = await checkAndIncrementUsage('flashcard_sets');
-    if (!canProceed) return;
+    if (!canProceed) {
+      toast({
+        title: "Usage Limit Reached",
+        description: "You've reached your flashcard sets limit. Please upgrade your plan for more access.",
+        variant: "error"
+      });
+      return;
+    }
 
     setIsLoading(true);
     try {

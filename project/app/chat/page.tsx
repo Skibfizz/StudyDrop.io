@@ -31,6 +31,7 @@ import { Textarea } from "@/components/ui/textarea";
 import ReactMarkdown from "react-markdown";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { SharedHeader } from "@/components/shared-header";
+import { toast } from "@/components/ui/use-toast";
 
 interface Flashcard {
   id: string;
@@ -215,13 +216,33 @@ export default function ChatPage() {
       const data = await response.json();
       
       if (!response.ok) {
+        if (response.status === 403) {
+          // Usage limit reached
+          toast({
+            title: "Usage Limit Reached",
+            description: "You've reached your text humanizations limit. Please upgrade your plan for more access.",
+            variant: "error"
+          });
+        } else {
+          toast({
+            title: "Error",
+            description: data.error || 'Failed to process text',
+            variant: "error"
+          });
+        }
         throw new Error(data.error || 'Failed to process text');
       }
 
       setOutputText(data.improvedText);
+      
+      toast({
+        title: "Success",
+        description: "Text humanized successfully",
+        variant: "success"
+      });
     } catch (error) {
       console.error('Error:', error);
-      // You might want to show an error toast here
+      // Error toast is already shown above for specific errors
     } finally {
       setIsProcessing(false);
     }

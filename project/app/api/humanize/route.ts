@@ -36,6 +36,88 @@ async function createSupabaseServerClient() {
   );
 }
 
+// Function to check if user has reached their usage limit
+async function checkUsageLimit(userId: string, usageType: string): Promise<boolean> {
+  try {
+    if (!userId) {
+      console.log('No user ID provided for usage limit check');
+      return false;
+    }
+
+    const supabase = await createSupabaseServerClient();
+    
+    // Get user's subscription tier
+    const { data: subscription, error: subscriptionError } = await supabase
+      .from('subscriptions')
+      .select('tier')
+      .eq('user_id', userId)
+      .single();
+      
+    if (subscriptionError) {
+      console.error('Error fetching subscription:', subscriptionError);
+      return false;
+    }
+    
+    // Default to free tier if no subscription found
+    const tier = subscription?.tier || 'free';
+    
+    // Get current usage
+    const { data: usage, error: usageError } = await supabase
+      .from('usage_tracking')
+      .select('*')
+      .eq('user_id', userId)
+      .single();
+      
+    if (usageError) {
+      console.error('Error fetching usage:', usageError);
+      return false;
+    }
+    
+    // If no usage record found, user hasn't used any features yet
+    if (!usage) {
+      return true;
+    }
+    
+    // Define limits based on tier
+    const limits = {
+      free: {
+        video_summaries: 5,
+        flashcard_sets: 5,
+        text_humanizations: 10
+      },
+      basic: {
+        video_summaries: 20,
+        flashcard_sets: 20,
+        text_humanizations: 40
+      },
+      pro: {
+        video_summaries: 1000,
+        flashcard_sets: 1000,
+        text_humanizations: 500
+      }
+    };
+    
+    // Get current usage count based on type
+    let currentUsage = 0;
+    if (usageType === 'text_humanizations') {
+      currentUsage = usage.text_humanizations_count || 0;
+    } else if (usageType === 'video_summaries') {
+      currentUsage = usage.video_summaries_count || 0;
+    } else if (usageType === 'flashcard_sets') {
+      currentUsage = usage.flashcard_sets_count || 0;
+    }
+    
+    // Get limit based on tier
+    const limit = limits[tier as keyof typeof limits][usageType as keyof typeof limits.free];
+    
+    // Check if user has reached their limit
+    return currentUsage < limit;
+  } catch (error) {
+    console.error('Failed to check usage limit:', error);
+    return false;
+  }
+}
+
 // Function to increment usage only after successful API response
 async function incrementUsage(userId: string) {
   try {
@@ -286,6 +368,28 @@ export async function POST(req: Request) {
       });
     }
 
+    // Get the current user
+    const supabase = await createSupabaseServerClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+      return new Response(JSON.stringify({ error: 'You must be logged in to use this feature' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Check if user has reached their usage limit
+    const canProceed = await checkUsageLimit(user.id, 'text_humanizations');
+    if (!canProceed) {
+      return new Response(JSON.stringify({ 
+        error: 'You have reached your text humanizations limit. Please upgrade your plan for more access.' 
+      }), {
+        status: 403,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
     const inputLength = text.length;
 
     // Process two rounds
@@ -293,10 +397,6 @@ export async function POST(req: Request) {
     for (let round = 1; round <= 2; round++) {
       processedText = await processRound(processedText, round, style as WritingStyle, inputLength);
     }
-
-    // Get the current user
-    const supabase = await createSupabaseServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
 
     // Only increment usage after successful API response
     if (user) {
