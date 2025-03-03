@@ -23,8 +23,9 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
-import { getAvatarGradient, getInitials } from "@/lib/avatar-utils";
+import { getInitials } from "@/lib/avatar-utils";
 import { SharedHeader } from "@/components/shared-header";
+import { VerifiedAvatar } from "@/components/verified-avatar";
 
 export default function EditProfilePage() {
   const [isLoading, setIsLoading] = useState(false);
@@ -37,11 +38,6 @@ export default function EditProfilePage() {
     await new Promise(resolve => setTimeout(resolve, 1000));
     setIsLoading(false);
   };
-
-  // Generate avatar data
-  const initials = getInitials(name);
-  // We'll use the site's signature gradient directly instead of a dynamic one
-  // const gradient = getAvatarGradient(name);
 
   return (
     <div className="flex min-h-screen flex-col bg-black text-white">
@@ -97,15 +93,17 @@ export default function EditProfilePage() {
             <CardContent className="relative">
               <div className="flex flex-col items-center space-y-4">
                 <div className="relative">
-                  <div className="h-32 w-32 overflow-hidden rounded-full border-4 border-white/10 transition-all duration-300 group-hover:border-purple-500/50 group-hover:shadow-lg group-hover:shadow-purple-500/20">
-                    <div className="h-full w-full flex items-center justify-center bg-gradient-to-br from-purple-500 to-blue-500 text-white text-3xl font-medium">
-                      {initials}
-                    </div>
+                  <div className="transition-all duration-300 group-hover:shadow-lg group-hover:shadow-purple-500/20">
+                    <VerifiedAvatar
+                      name={name}
+                      size="lg"
+                      isVerified={true}
+                    />
                   </div>
                 </div>
                 <div className="text-center">
                   <p className="text-sm text-white/60">
-                    We use text-based avatars to save storage space.
+                    Verified user with premium features.
                   </p>
                 </div>
               </div>

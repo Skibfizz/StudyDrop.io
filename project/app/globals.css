@@ -65,6 +65,13 @@
     --pricing-card-bg: rgba(255, 255, 255, 0.8);
     --pricing-card-border: rgba(0, 0, 0, 0.1);
     --pricing-card-hover: rgba(0, 0, 0, 0.03);
+    
+    /* Rainbow button variables */
+    --color-1: 0 100% 63%;
+    --color-2: 270 100% 63%;
+    --color-3: 210 100% 63%;
+    --color-4: 195 100% 63%;
+    --color-5: 90 100% 63%;
   }
 }
 
@@ -93,6 +100,13 @@
   @apply border-b backdrop-blur supports-[backdrop-filter]:bg-[hsl(var(--background))]/60;
   border-color: hsl(var(--header-border));
   background-color: hsl(var(--header-bg));
+}
+
+.transparent-header {
+  background-color: transparent !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border: none !important;
 }
 
 .theme-dot-pattern {

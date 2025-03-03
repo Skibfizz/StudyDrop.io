@@ -9,11 +9,21 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
+import { HomepageNavbar } from "@/components/homepage-navbar";
 import { SharedHeader } from "@/components/shared-header";
+import { LogoCarouselDemo } from "@/components/ui/logo-carousel-demo";
+import { useTheme } from "next-themes";
+import { Footer } from "@/components/ui/code.demo";
+import { AnimatedGridPattern } from "@/components/ui/animated-grid-pattern";
+import { cn } from "@/lib/utils";
+import { RainbowButton } from "@/components/ui/rainbow-button";
+import { AvatarCircles } from "@/components/ui/avatar-circles";
+import { StarRating } from "@/components/ui/star-rating";
 
 export default function Home() {
   const router = useRouter();
   const { data: session } = useSession();
+  const { theme } = useTheme();
 
   const reviews = [
     {
@@ -68,91 +78,59 @@ export default function Home() {
   };
 
   return (
-    <div className="flex min-h-screen flex-col bg-background text-foreground">
-      <SharedHeader />
+    <div className="flex min-h-screen flex-col bg-background text-foreground overflow-hidden">
+      <div className="absolute inset-0 theme-gradient-bg z-0" />
+      <div className="absolute inset-0 theme-dot-pattern z-0" />
+      <HomepageNavbar />
       
-      <main className="flex-1">
+      <main className="flex-1 pt-20 md:pt-0 relative z-10">
         {/* Hero Section */}
         <section className="relative flex items-center justify-center px-6 pt-80 pb-80">
-          {/* Enhanced Gradient Background */}
-          <div className="absolute inset-0 theme-gradient-bg" />
-          <div className="absolute inset-0 theme-dot-pattern" />
+          <AnimatedGridPattern
+            numSquares={50}
+            maxOpacity={0.1}
+            duration={4}
+            repeatDelay={0.5}
+            className={cn(
+              "[mask-image:radial-gradient(800px_circle_at_center,white,transparent)]",
+              "inset-x-0 inset-y-0 h-full"
+            )}
+          />
           
           <div className="relative mx-auto max-w-[920px] space-y-8 text-center flex flex-col items-center justify-center">
-            {/* Enhanced Status Badge */}
-            <div className="animate-pulse inline-flex items-center rounded-full border border-purple-500/40 bg-purple-500/20 px-4 py-1.5 text-sm font-medium backdrop-blur self-center">
-              <span className="text-purple-600">New</span>
-              <span className="mx-2 text-purple-600">•</span>
-              <span className="text-purple-600">AI Study Assistant Now Live</span>
-              <Sparkles className="ml-2 h-4 w-4 text-purple-600" />
+            <h1 className="text-5xl font-bold tracking-tight sm:text-6xl md:text-7xl lg:text-8xl mb-4 mx-auto text-center">
+              <span className="block text-transparent bg-clip-text bg-gradient-to-r from-purple-500 to-blue-500 leading-[1.2] pb-1">
+                Master any subject
+              </span>
+              <span className="block leading-[1.2]">with AI-Powered learning</span>
+            </h1>
+            
+            <div className="mt-4 mb-8">
+              <RainbowButton onClick={() => router.push('/auth/signin')}>
+                Get started - It's Free
+              </RainbowButton>
+              <div className="flex flex-row items-center justify-center gap-6 mt-6 w-full mx-auto">
+                <AvatarCircles 
+                  numPeople={99} 
+                  avatarUrls={[
+                    "https://avatars.githubusercontent.com/u/16860528",
+                    "https://avatars.githubusercontent.com/u/20110627",
+                    "https://avatars.githubusercontent.com/u/106103625",
+                    "https://avatars.githubusercontent.com/u/59228569",
+                  ]} 
+                />
+                <StarRating defaultValue={4.5} disabled size="md" />
+              </div>
             </div>
             
-            {/* More Impactful Headline */}
-            <div className="space-y-4 w-full text-center">
-              <h1 className="text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl lg:text-7xl mx-auto">
-                <span className="block bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-blue-600 leading-[1.15] mb-1">
-                  Master Any Subject
-                </span>
-                <span className="block bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-blue-600 leading-[1.15]">
-                  With AI-Powered Learning
-                </span>
-              </h1>
-            </div>
-
-            {/* Feature Highlights */}
-            <div className="mt-16 grid grid-cols-3 gap-4 max-w-[600px] mx-auto mb-8">
-              <div className="theme-card p-4 flex flex-col items-center space-y-2">
-                <Brain className="h-6 w-6 text-purple-400" />
-                <span className="text-sm font-medium text-gray-900">Smart AI Tutor</span>
-              </div>
-              <div className="theme-card p-4 flex flex-col items-center space-y-2">
-                <Zap className="h-6 w-6 text-blue-400" />
-                <span className="text-sm font-medium text-gray-900">Instant Help</span>
-              </div>
-              <div className="theme-card p-4 flex flex-col items-center space-y-2">
-                <Star className="h-6 w-6 text-yellow-400" />
-                <span className="text-sm font-medium text-gray-900">Track Progress</span>
-              </div>
-            </div>
-
-            {/* Enhanced CTA Section */}
-            <div className="flex flex-col items-center space-y-4">
-              <Button 
-                size="lg" 
-                className="h-14 px-8 text-lg bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 transform hover:scale-105 transition-all"
-                onClick={() => router.push('/auth/signin')}
-              >
-                Get Started Free
-                <ArrowRight className="ml-2 h-5 w-5" />
-              </Button>
-              <p className="text-sm text-gray-600">No credit card required • Free plan available</p>
-            </div>
-
-            {/* Social Proof */}
-            <div className="mt-2 pt-2 border-t border-foreground/10">
-              <div className="flex justify-center items-center space-x-8 text-gray-600">
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-gray-900">50K+</div>
-                  <div className="text-sm">Active Users</div>
-                </div>
-                <div className="h-8 w-px bg-foreground/10" />
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-gray-900">1M+</div>
-                  <div className="text-sm">Questions Answered</div>
-                </div>
-                <div className="h-8 w-px bg-foreground/10" />
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-gray-900">4.9/5</div>
-                  <div className="text-sm">User Rating</div>
-                </div>
-              </div>
+            <div className="w-[75%] mt-16">
+              <LogoCarouselDemo />
             </div>
           </div>
         </section>
 
         {/* Reviews Section */}
-        <section className="relative px-0 py-64 border-t border-foreground/10 overflow-hidden">
-          <div className="absolute inset-0 theme-gradient-bg" />
+        <section id="reviews-section" className="relative px-0 py-64 overflow-hidden">
           <div className="relative mx-auto w-full">
             <div className="text-center mb-32">
               <h2 className="text-3xl font-bold sm:text-4xl mb-10 text-gray-900">What Our Users Say</h2>
@@ -196,8 +174,7 @@ export default function Home() {
         </section>
 
         {/* Features Section */}
-        <section className="relative px-6 py-32 border-t border-foreground/10">
-          <div className="absolute inset-0 theme-gradient-bg" />
+        <section id="features-section" className="relative px-6 py-32">
           <div className="relative mx-auto max-w-[1200px] space-y-16">
             <div className="text-center space-y-4">
               <h2 className="text-3xl font-bold sm:text-4xl text-gray-900">Features that set us apart</h2>
@@ -270,28 +247,8 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Stats Section */}
-        <section className="relative px-6 py-24 border-t border-foreground/10">
-          <div className="mx-auto max-w-[1200px]">
-            <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
-              {[
-                { label: "Active Users", value: "50K+" },
-                { label: "Notes Processed", value: "1M+" },
-                { label: "Questions Answered", value: "10M+" },
-                { label: "Study Hours", value: "500K+" }
-              ].map((stat) => (
-                <div key={stat.label} className="text-center space-y-2">
-                  <div className="text-4xl font-bold text-gray-900">{stat.value}</div>
-                  <div className="text-gray-600">{stat.label}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
         {/* Final CTA Section */}
-        <section className="relative px-6 py-24 border-t border-foreground/10">
-          <div className="absolute inset-0 theme-gradient-bg" />
+        <section className="relative px-6 py-24">
           <div className="relative mx-auto max-w-[920px] text-center space-y-8">
             <h2 className="text-3xl font-bold sm:text-4xl text-gray-900">Ready to transform your study experience?</h2>
             <p className="text-gray-600 max-w-[600px] mx-auto">
@@ -310,6 +267,8 @@ export default function Home() {
           </div>
         </section>
       </main>
+      
+      <Footer />
     </div>
   );
 }

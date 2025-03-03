@@ -10,9 +10,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useAuth } from "@/lib/hooks/useAuth";
-import { getAvatarGradient, getInitials } from "@/lib/avatar-utils";
+import { getInitials } from "@/lib/avatar-utils";
 import { 
   User, 
   Settings, 
@@ -23,24 +22,14 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { VerifiedAvatar } from "@/components/verified-avatar";
 
 export function UserNav() {
   const { user, signOut } = useAuth();
   const router = useRouter();
 
   if (!user) {
-    return (
-      <div className="flex items-center space-x-4">
-        <Link href="/auth/signin">
-          <Button variant="ghost" size="sm">Sign In</Button>
-        </Link>
-        <Link href="/auth/signup">
-          <Button size="sm" className="bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600">
-            Sign Up
-          </Button>
-        </Link>
-      </div>
-    );
+    return null; // Return nothing if user is not logged in
   }
 
   const handleSignOut = async () => {
@@ -52,18 +41,17 @@ export function UserNav() {
   const userMetadata = user.user_metadata || {};
   const displayName = userMetadata.full_name || userMetadata.username || user.email?.split('@')[0] || 'User';
   
-  // Generate initials for the avatar
-  const initials = getInitials(displayName);
-  // We'll use the site's signature gradient directly
-  // const gradient = getAvatarGradient(displayName);
+  // We don't need to generate initials here anymore as the VerifiedAvatar component will do it
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-          <Avatar className="h-8 w-8">
-            <AvatarFallback>{initials}</AvatarFallback>
-          </Avatar>
+        <Button variant="ghost" className="relative h-8 w-8 rounded-full p-0 mt-2">
+          <VerifiedAvatar 
+            name={displayName} 
+            size="sm"
+            isVerified={true}
+          />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-56" align="end" forceMount>

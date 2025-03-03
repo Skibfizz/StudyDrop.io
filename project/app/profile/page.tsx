@@ -11,14 +11,17 @@ import { User, Mail, Camera, Upload } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useState, useEffect } from "react";
 import { useToast } from "@/components/ui/use-toast";
-import { getAvatarGradient, getInitials } from "@/lib/avatar-utils";
+import { getInitials } from "@/lib/avatar-utils";
 import { SharedHeader } from "@/components/shared-header";
+import { VerifiedAvatar } from "@/components/verified-avatar";
+import { useUsage } from "@/lib/hooks/use-usage";
 
 export default function ProfilePage() {
   const { data: session } = useSession();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const { toast } = useToast();
+  const { usageData } = useUsage();
   
   // Initialize form with user data when session is loaded
   useEffect(() => {
@@ -39,9 +42,11 @@ export default function ProfilePage() {
 
   // Generate avatar data
   const displayName = session?.user?.name || "User";
-  const initials = getInitials(displayName);
-  // We'll use the site's signature gradient directly instead of a dynamic one
-  // const gradient = getAvatarGradient(displayName);
+  
+  // Format subscription tier for display
+  const formatTier = (tier: string) => {
+    return tier.charAt(0).toUpperCase() + tier.slice(1);
+  };
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -78,11 +83,11 @@ export default function ProfilePage() {
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-8">
                   <div className="relative group">
-                    <div className="h-24 w-24 rounded-full overflow-hidden ring-4 ring-purple-50 ring-offset-2">
-                      <div className="h-full w-full flex items-center justify-center bg-gradient-to-br from-purple-500 to-blue-500 text-white text-2xl font-medium">
-                        {initials}
-                      </div>
-                    </div>
+                    <VerifiedAvatar
+                      name={displayName}
+                      size="lg"
+                      isVerified={true}
+                    />
                   </div>
                   <div className="space-y-1">
                     <h3 className="text-xl font-semibold bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-blue-600">
@@ -90,7 +95,7 @@ export default function ProfilePage() {
                     </h3>
                     <p className="text-sm text-muted-foreground">{session?.user?.email || "your.email@example.com"}</p>
                     <p className="text-xs text-muted-foreground mt-2">
-                      We use text-based avatars to save storage space.
+                      {usageData ? `${formatTier(usageData.tier)} subscription` : "Loading subscription..."}
                     </p>
                   </div>
                 </div>
