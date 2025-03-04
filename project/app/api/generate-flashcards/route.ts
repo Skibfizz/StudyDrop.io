@@ -36,6 +36,142 @@ async function createSupabaseServerClient() {
   );
 }
 
+// Function to check if user has reached their usage limit
+async function checkUsageLimit(userId: string, usageType: string): Promise<boolean> {
+  try {
+    if (!userId) {
+      console.log('No user ID provided for usage limit check');
+      return false;
+    }
+
+    console.log('Checking usage limit for user:', {
+      userId,
+      usageType,
+      timestamp: new Date().toISOString()
+    });
+
+    const supabase = await createSupabaseServerClient();
+    
+    // Get user's subscription tier
+    const { data: subscription, error: subscriptionError } = await supabase
+      .from('subscriptions')
+      .select('tier')
+      .eq('user_id', userId)
+      .single();
+      
+    if (subscriptionError) {
+      console.error('Error fetching subscription:', {
+        error: subscriptionError.message,
+        details: subscriptionError.details,
+        hint: subscriptionError.hint,
+        code: subscriptionError.code,
+        userId
+      });
+      
+      // Create a default subscription for this user if it doesn't exist
+      const { error: insertError } = await supabase
+        .from('subscriptions')
+        .insert({ user_id: userId, tier: 'free' })
+        .single();
+        
+      if (insertError && insertError.code !== '23505') { // Ignore duplicate key errors
+        console.error('Error creating default subscription:', insertError);
+        return true; // Allow usage if we can't check properly
+      }
+    }
+    
+    // Default to free tier if no subscription found
+    const tier = subscription?.tier || 'free';
+    console.log('User subscription tier:', { tier, userId });
+    
+    // Get current usage
+    const { data: usage, error: usageError } = await supabase
+      .from('usage_tracking')
+      .select('*')
+      .eq('user_id', userId)
+      .single();
+      
+    if (usageError && usageError.code !== 'PGRST116') { // PGRST116 is "no rows returned"
+      console.error('Error fetching usage:', {
+        error: usageError.message,
+        details: usageError.details,
+        hint: usageError.hint,
+        code: usageError.code,
+        userId
+      });
+      
+      // Create a default usage record for this user if it doesn't exist
+      const { error: insertError } = await supabase
+        .from('usage_tracking')
+        .insert({ 
+          user_id: userId, 
+          video_summaries_count: 0,
+          flashcard_sets_count: 0,
+          text_humanizations_count: 0,
+          reset_date: new Date().toISOString()
+        })
+        .single();
+        
+      if (insertError && insertError.code !== '23505') { // Ignore duplicate key errors
+        console.error('Error creating default usage record:', insertError);
+        return true; // Allow usage if we can't check properly
+      }
+    }
+    
+    // If no usage record found, user hasn't used any features yet
+    if (!usage) {
+      console.log('No usage record found, creating default record');
+      return true;
+    }
+    
+    // Define limits based on tier
+    const limits = {
+      free: {
+        video_summaries: 5,
+        flashcard_sets: 5,
+        text_humanizations: 10
+      },
+      basic: {
+        video_summaries: 20,
+        flashcard_sets: 20,
+        text_humanizations: 40
+      },
+      pro: {
+        video_summaries: 1000,
+        flashcard_sets: 1000,
+        text_humanizations: 500
+      }
+    };
+    
+    // Get current usage count based on type
+    let currentUsage = 0;
+    if (usageType === 'text_humanizations') {
+      currentUsage = usage.text_humanizations_count || 0;
+    } else if (usageType === 'video_summaries') {
+      currentUsage = usage.video_summaries_count || 0;
+    } else if (usageType === 'flashcard_sets') {
+      currentUsage = usage.flashcard_sets_count || 0;
+    }
+    
+    // Get limit based on tier
+    const limit = limits[tier as keyof typeof limits][usageType as keyof typeof limits.free];
+    
+    console.log('Usage check result:', {
+      currentUsage,
+      limit,
+      hasRemainingUsage: currentUsage < limit,
+      userId,
+      usageType
+    });
+    
+    // Check if user has reached their limit
+    return currentUsage < limit;
+  } catch (error) {
+    console.error('Failed to check usage limit:', error);
+    return true; // Allow usage if we can't check properly
+  }
+}
+
 // Function to increment usage only after successful API response
 async function incrementUsage(userId: string) {
   try {
@@ -89,6 +225,25 @@ export async function POST(req: Request) {
       });
     }
 
+    // Get the current user
+    const supabase = await createSupabaseServerClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    // Check usage limits before processing
+    if (user) {
+      const hasRemainingUsage = await checkUsageLimit(user.id, 'flashcard_sets');
+      if (!hasRemainingUsage) {
+        return new Response(JSON.stringify({ 
+          success: false,
+          error: 'Usage limit reached',
+          message: 'You have reached your usage limit for flashcard sets. Please upgrade your plan for more access.'
+        }), {
+          status: 403,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+    }
+
     const completion = await openai.chat.completions.create({
       model: "gpt-4o-mini-2024-07-18",
       temperature: 0.7,
@@ -133,10 +288,6 @@ Example of expected format (return exactly like this):
     
     try {
       const flashcards = JSON.parse(cleanedText);
-
-      // Get the current user
-      const supabase = await createSupabaseServerClient();
-      const { data: { user } } = await supabase.auth.getUser();
 
       // Only increment usage after successful API response
       if (user) {

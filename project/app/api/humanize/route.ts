@@ -44,6 +44,12 @@ async function checkUsageLimit(userId: string, usageType: string): Promise<boole
       return false;
     }
 
+    console.log('Checking usage limit for user:', {
+      userId,
+      usageType,
+      timestamp: new Date().toISOString()
+    });
+
     const supabase = await createSupabaseServerClient();
     
     // Get user's subscription tier
@@ -54,12 +60,29 @@ async function checkUsageLimit(userId: string, usageType: string): Promise<boole
       .single();
       
     if (subscriptionError) {
-      console.error('Error fetching subscription:', subscriptionError);
-      return false;
+      console.error('Error fetching subscription:', {
+        error: subscriptionError.message,
+        details: subscriptionError.details,
+        hint: subscriptionError.hint,
+        code: subscriptionError.code,
+        userId
+      });
+      
+      // Create a default subscription for this user if it doesn't exist
+      const { error: insertError } = await supabase
+        .from('subscriptions')
+        .insert({ user_id: userId, tier: 'free' })
+        .single();
+        
+      if (insertError && insertError.code !== '23505') { // Ignore duplicate key errors
+        console.error('Error creating default subscription:', insertError);
+        return true; // Allow usage if we can't check properly
+      }
     }
     
     // Default to free tier if no subscription found
     const tier = subscription?.tier || 'free';
+    console.log('User subscription tier:', { tier, userId });
     
     // Get current usage
     const { data: usage, error: usageError } = await supabase
@@ -68,13 +91,36 @@ async function checkUsageLimit(userId: string, usageType: string): Promise<boole
       .eq('user_id', userId)
       .single();
       
-    if (usageError) {
-      console.error('Error fetching usage:', usageError);
-      return false;
+    if (usageError && usageError.code !== 'PGRST116') { // PGRST116 is "no rows returned"
+      console.error('Error fetching usage:', {
+        error: usageError.message,
+        details: usageError.details,
+        hint: usageError.hint,
+        code: usageError.code,
+        userId
+      });
+      
+      // Create a default usage record for this user if it doesn't exist
+      const { error: insertError } = await supabase
+        .from('usage_tracking')
+        .insert({ 
+          user_id: userId, 
+          video_summaries_count: 0,
+          flashcard_sets_count: 0,
+          text_humanizations_count: 0,
+          reset_date: new Date().toISOString()
+        })
+        .single();
+        
+      if (insertError && insertError.code !== '23505') { // Ignore duplicate key errors
+        console.error('Error creating default usage record:', insertError);
+        return true; // Allow usage if we can't check properly
+      }
     }
     
     // If no usage record found, user hasn't used any features yet
     if (!usage) {
+      console.log('No usage record found, creating default record');
       return true;
     }
     
@@ -110,11 +156,19 @@ async function checkUsageLimit(userId: string, usageType: string): Promise<boole
     // Get limit based on tier
     const limit = limits[tier as keyof typeof limits][usageType as keyof typeof limits.free];
     
+    console.log('Usage check result:', {
+      currentUsage,
+      limit,
+      hasRemainingUsage: currentUsage < limit,
+      userId,
+      usageType
+    });
+    
     // Check if user has reached their limit
     return currentUsage < limit;
   } catch (error) {
     console.error('Failed to check usage limit:', error);
-    return false;
+    return true; // Allow usage if we can't check properly
   }
 }
 

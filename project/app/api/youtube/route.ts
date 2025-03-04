@@ -4,6 +4,8 @@ import path from 'path';
 import OpenAI from 'openai';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
+import fetch from 'node-fetch';
+import { saveVideoSummary } from '@/lib/video-helpers';
 
 const execAsync = promisify(exec);
 const openai = new OpenAI({
@@ -152,6 +154,142 @@ async function getTranscript(videoId: string) {
   }
 }
 
+// Function to check if user has reached their usage limit
+async function checkUsageLimit(userId: string, usageType: string): Promise<boolean> {
+  try {
+    if (!userId) {
+      console.log('No user ID provided for usage limit check');
+      return false;
+    }
+
+    console.log('Checking usage limit for user:', {
+      userId,
+      usageType,
+      timestamp: new Date().toISOString()
+    });
+
+    const supabase = await createSupabaseServerClient();
+    
+    // Get user's subscription tier
+    const { data: subscription, error: subscriptionError } = await supabase
+      .from('subscriptions')
+      .select('tier')
+      .eq('user_id', userId)
+      .single();
+      
+    if (subscriptionError) {
+      console.error('Error fetching subscription:', {
+        error: subscriptionError.message,
+        details: subscriptionError.details,
+        hint: subscriptionError.hint,
+        code: subscriptionError.code,
+        userId
+      });
+      
+      // Create a default subscription for this user if it doesn't exist
+      const { error: insertError } = await supabase
+        .from('subscriptions')
+        .insert({ user_id: userId, tier: 'free' })
+        .single();
+        
+      if (insertError && insertError.code !== '23505') { // Ignore duplicate key errors
+        console.error('Error creating default subscription:', insertError);
+        return true; // Allow usage if we can't check properly
+      }
+    }
+    
+    // Default to free tier if no subscription found
+    const tier = subscription?.tier || 'free';
+    console.log('User subscription tier:', { tier, userId });
+    
+    // Get current usage
+    const { data: usage, error: usageError } = await supabase
+      .from('usage_tracking')
+      .select('*')
+      .eq('user_id', userId)
+      .single();
+      
+    if (usageError && usageError.code !== 'PGRST116') { // PGRST116 is "no rows returned"
+      console.error('Error fetching usage:', {
+        error: usageError.message,
+        details: usageError.details,
+        hint: usageError.hint,
+        code: usageError.code,
+        userId
+      });
+      
+      // Create a default usage record for this user if it doesn't exist
+      const { error: insertError } = await supabase
+        .from('usage_tracking')
+        .insert({ 
+          user_id: userId, 
+          video_summaries_count: 0,
+          flashcard_sets_count: 0,
+          text_humanizations_count: 0,
+          reset_date: new Date().toISOString()
+        })
+        .single();
+        
+      if (insertError && insertError.code !== '23505') { // Ignore duplicate key errors
+        console.error('Error creating default usage record:', insertError);
+        return true; // Allow usage if we can't check properly
+      }
+    }
+    
+    // If no usage record found, user hasn't used any features yet
+    if (!usage) {
+      console.log('No usage record found, creating default record');
+      return true;
+    }
+    
+    // Define limits based on tier
+    const limits = {
+      free: {
+        video_summaries: 5,
+        flashcard_sets: 5,
+        text_humanizations: 10
+      },
+      basic: {
+        video_summaries: 20,
+        flashcard_sets: 20,
+        text_humanizations: 40
+      },
+      pro: {
+        video_summaries: 1000,
+        flashcard_sets: 1000,
+        text_humanizations: 500
+      }
+    };
+    
+    // Get current usage count based on type
+    let currentUsage = 0;
+    if (usageType === 'text_humanizations') {
+      currentUsage = usage.text_humanizations_count || 0;
+    } else if (usageType === 'video_summaries') {
+      currentUsage = usage.video_summaries_count || 0;
+    } else if (usageType === 'flashcard_sets') {
+      currentUsage = usage.flashcard_sets_count || 0;
+    }
+    
+    // Get limit based on tier
+    const limit = limits[tier as keyof typeof limits][usageType as keyof typeof limits.free];
+    
+    console.log('Usage check result:', {
+      currentUsage,
+      limit,
+      hasRemainingUsage: currentUsage < limit,
+      userId,
+      usageType
+    });
+    
+    // Check if user has reached their limit
+    return currentUsage < limit;
+  } catch (error) {
+    console.error('Failed to check usage limit:', error);
+    return true; // Allow usage if we can't check properly
+  }
+}
+
 // Function to increment usage only after successful API response
 async function incrementUsage(userId: string) {
   try {
@@ -180,6 +318,39 @@ async function incrementUsage(userId: string) {
   }
 }
 
+// Function to get video details from YouTube
+async function getVideoDetails(videoId: string) {
+  try {
+    // Use YouTube Data API to get video details
+    const apiKey = process.env.YOUTUBE_API_KEY;
+    
+    if (!apiKey) {
+      console.warn('YouTube API key not found, using fallback method');
+      return { title: `YouTube Video (${videoId})`, duration: 'PT00M00S' };
+    }
+    
+    const response = await fetch(
+      `https://www.googleapis.com/youtube/v3/videos?id=${videoId}&part=snippet,contentDetails&key=${apiKey}`
+    );
+    
+    const data = await response.json();
+    
+    if (!data.items || data.items.length === 0) {
+      console.warn('No video details found from YouTube API');
+      return { title: `YouTube Video (${videoId})`, duration: 'PT00M00S' };
+    }
+    
+    const videoDetails = data.items[0];
+    const title = videoDetails.snippet?.title || `YouTube Video (${videoId})`;
+    const duration = videoDetails.contentDetails?.duration || 'PT00M00S';
+    
+    return { title, duration };
+  } catch (error) {
+    console.error('Error fetching video details:', error);
+    return { title: `YouTube Video (${videoId})`, duration: 'PT00M00S' };
+  }
+}
+
 export async function POST(req: Request) {
   try {
     const { url } = await req.json();
@@ -199,26 +370,60 @@ export async function POST(req: Request) {
       });
     }
 
+    // Get the current user
+    const supabase = await createSupabaseServerClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    // Check usage limits before processing
+    if (user) {
+      const hasRemainingUsage = await checkUsageLimit(user.id, 'video_summaries');
+      if (!hasRemainingUsage) {
+        return new Response(JSON.stringify({ 
+          success: false,
+          error: 'Usage limit reached',
+          message: 'You have reached your usage limit for video summaries. Please upgrade your plan for more access.'
+        }), {
+          status: 403,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+    }
+
     // Get transcript
     const transcriptData = await getTranscript(videoId);
     
     // Process with AI
     const analysis = await processTranscriptWithAI(transcriptData);
-
-    // Get the current user
-    const supabase = await createSupabaseServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    
+    // Get video details (title and duration)
+    const { title, duration } = await getVideoDetails(videoId);
 
     // Only increment usage after successful API response
     if (user) {
       await incrementUsage(user.id);
+      
+      // Save the video summary to the database
+      try {
+        await saveVideoSummary(user.id, {
+          videoId,
+          title,
+          duration,
+          summary: analysis,
+          transcript: transcriptData
+        });
+      } catch (saveError) {
+        console.error('Error saving video summary:', saveError);
+        // Continue even if saving fails
+      }
     }
 
     return new Response(JSON.stringify({ 
       success: true,
       videoId,
+      title,
+      duration,
       summary: analysis,
-      transcript: transcriptData // Include the transcript in the response
+      transcript: transcriptData
     }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },

@@ -16,21 +16,29 @@ import {
   Users
 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { FeatureUsage } from "@/components/dashboard/feature-usage";
 import { TierInfo } from "@/components/dashboard/tier-info";
 import { SubscriptionCard } from "@/components/dashboard/subscription-card";
+import { RecentLectures } from "@/components/recent-lectures";
 import { useUsage } from "@/lib/hooks/use-usage";
 import { useEffect } from "react";
 import { SharedHeader } from "@/components/shared-header";
 
 export default function DashboardPage() {
   const { refresh } = useUsage();
+  const router = useRouter();
 
   // Refresh usage data when dashboard page mounts
   useEffect(() => {
     refresh();
   }, [refresh]);
+
+  // Handle lecture selection
+  const handleLectureSelect = (lecture: any) => {
+    router.push(`/chat?tab=youtube&videoId=${lecture.videoId}`);
+  };
 
   const features = [
     {
@@ -130,6 +138,19 @@ export default function DashboardPage() {
               <div className="col-span-1">
                 <h2 className="text-xl font-semibold mb-4">Subscription</h2>
                 <SubscriptionCard />
+              </div>
+            </div>
+
+            {/* Recent Lectures Section */}
+            <div className="mt-12">
+              <h2 className="text-xl font-semibold mb-4">Recent Lectures</h2>
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <div className="col-span-1 lg:col-span-3">
+                  <RecentLectures 
+                    onLectureSelect={handleLectureSelect}
+                    limit={3}
+                  />
+                </div>
               </div>
             </div>
           </div>

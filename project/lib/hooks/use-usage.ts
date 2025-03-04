@@ -87,41 +87,11 @@ export function useUsage() {
         return;
       }
       
-      // Check if tables exist by attempting to count rows
-      const { count: subscriptionCount, error: countError } = await supabase
-        .from('subscriptions')
-        .select('*', { count: 'exact', head: true });
-
-      console.log('🔍 Checking database tables:', {
-        subscriptionsTableExists: countError ? false : true,
-        error: countError?.message,
-        details: countError?.details,
-        hint: countError?.hint,
-        code: countError?.code,
-        timestamp: new Date().toISOString()
-      });
-
-      // If database tables don't exist or there's an error, use default free tier data
-      if (countError) {
-        console.log('⚠️ Database tables not found, using default free tier data');
-        setUsageData({
-          usage: {
-            video_summaries: 0,
-            flashcard_sets: 0,
-            text_humanizations: 0
-          },
-          limits: TIER_LIMITS['free'],
-          tier: 'free'
-        });
-        setLoading(false);
-        return;
-      }
-
-      // Get current subscription tier
+      // First, ensure the user has a subscription record
       const { data: subscription, error: subscriptionError } = await supabase
         .from('subscriptions')
         .select('tier')
-        .eq('user_id', user?.id)
+        .eq('user_id', user.id)
         .single();
 
       console.log('💳 Subscription query result:', {
@@ -134,6 +104,19 @@ export function useUsage() {
         timestamp: new Date().toISOString()
       });
 
+      // If subscription not found, create a default one
+      if (subscriptionError && subscriptionError.code === 'PGRST116') { // PGRST116 is "no rows returned"
+        console.log('⚠️ No subscription found, creating default subscription');
+        const { error: insertError } = await supabase
+          .from('subscriptions')
+          .insert({ user_id: user.id, tier: 'free' })
+          .single();
+          
+        if (insertError && insertError.code !== '23505') { // Ignore duplicate key errors
+          console.error('❌ Error creating default subscription:', insertError);
+        }
+      }
+
       // Default to free tier if subscription not found
       const tier = subscription?.tier || 'free';
 
@@ -141,7 +124,7 @@ export function useUsage() {
       const { data: usage, error: usageError } = await supabase
         .from('usage_tracking')
         .select('*')
-        .eq('user_id', user?.id)
+        .eq('user_id', user.id)
         .single();
 
       console.log('📈 Usage query result:', {
@@ -154,22 +137,77 @@ export function useUsage() {
         timestamp: new Date().toISOString()
       });
 
-      // Default to zero usage if not found
-      const currentUsage = usage || {
-        video_summaries_count: 0,
-        flashcard_sets_count: 0,
-        text_humanizations_count: 0
-      };
+      // If usage record not found, create a default one
+      if (usageError && usageError.code === 'PGRST116') { // PGRST116 is "no rows returned"
+        console.log('⚠️ No usage record found, creating default usage record');
+        const { error: insertError } = await supabase
+          .from('usage_tracking')
+          .insert({ 
+            user_id: user.id, 
+            video_summaries_count: 0,
+            flashcard_sets_count: 0,
+            text_humanizations_count: 0,
+            reset_date: new Date().toISOString()
+          })
+          .single();
+          
+        if (insertError && insertError.code !== '23505') { // Ignore duplicate key errors
+          console.error('❌ Error creating default usage record:', insertError);
+        }
+      }
 
-      setUsageData({
-        usage: {
-          video_summaries: currentUsage.video_summaries_count || 0,
-          flashcard_sets: currentUsage.flashcard_sets_count || 0,
-          text_humanizations: currentUsage.text_humanizations_count || 0
-        },
-        limits: TIER_LIMITS[tier],
-        tier
-      });
+      // Fetch the usage data again after creating default records
+      if ((subscriptionError && subscriptionError.code === 'PGRST116') || 
+          (usageError && usageError.code === 'PGRST116')) {
+        console.log('🔄 Fetching usage data again after creating default records');
+        
+        const { data: refreshedSubscription } = await supabase
+          .from('subscriptions')
+          .select('tier')
+          .eq('user_id', user.id)
+          .single();
+          
+        const { data: refreshedUsage } = await supabase
+          .from('usage_tracking')
+          .select('*')
+          .eq('user_id', user.id)
+          .single();
+          
+        // Use the refreshed data if available
+        const finalTier = refreshedSubscription?.tier || tier;
+        const finalUsage = refreshedUsage || usage || {
+          video_summaries_count: 0,
+          flashcard_sets_count: 0,
+          text_humanizations_count: 0
+        };
+        
+        setUsageData({
+          usage: {
+            video_summaries: finalUsage.video_summaries_count || 0,
+            flashcard_sets: finalUsage.flashcard_sets_count || 0,
+            text_humanizations: finalUsage.text_humanizations_count || 0
+          },
+          limits: TIER_LIMITS[finalTier],
+          tier: finalTier as 'free' | 'basic' | 'pro'
+        });
+      } else {
+        // Default to zero usage if not found
+        const currentUsage = usage || {
+          video_summaries_count: 0,
+          flashcard_sets_count: 0,
+          text_humanizations_count: 0
+        };
+
+        setUsageData({
+          usage: {
+            video_summaries: currentUsage.video_summaries_count || 0,
+            flashcard_sets: currentUsage.flashcard_sets_count || 0,
+            text_humanizations: currentUsage.text_humanizations_count || 0
+          },
+          limits: TIER_LIMITS[tier],
+          tier
+        });
+      }
     } catch (error) {
       console.error('❌ Error in fetchUsage:', {
         message: error instanceof Error ? error.message : 'Unknown error',
@@ -208,10 +246,72 @@ export function useUsage() {
     try {
       console.log('🔍 Checking usage limits for:', {
         userId: user.id,
+        email: user.email,
         usageType,
         timestamp: new Date().toISOString()
       });
 
+      // First, ensure the user has a subscription record
+      const { data: subscription, error: subscriptionError } = await supabase
+        .from('subscriptions')
+        .select('tier')
+        .eq('user_id', user.id)
+        .single();
+
+      if (subscriptionError && subscriptionError.code !== 'PGRST116') { // PGRST116 is "no rows returned"
+        console.error('❌ Error fetching subscription:', {
+          error: subscriptionError.message,
+          details: subscriptionError.details,
+          hint: subscriptionError.hint,
+          code: subscriptionError.code,
+          userId: user.id
+        });
+        
+        // Create a default subscription for this user if it doesn't exist
+        const { error: insertError } = await supabase
+          .from('subscriptions')
+          .insert({ user_id: user.id, tier: 'free' })
+          .single();
+          
+        if (insertError && insertError.code !== '23505') { // Ignore duplicate key errors
+          console.error('❌ Error creating default subscription:', insertError);
+        }
+      }
+
+      // Then, ensure the user has a usage tracking record
+      const { data: usage, error: usageError } = await supabase
+        .from('usage_tracking')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+
+      if (usageError && usageError.code !== 'PGRST116') { // PGRST116 is "no rows returned"
+        console.error('❌ Error fetching usage:', {
+          error: usageError.message,
+          details: usageError.details,
+          hint: usageError.hint,
+          code: usageError.code,
+          userId: user.id
+        });
+        
+        // Create a default usage record for this user if it doesn't exist
+        const { error: insertError } = await supabase
+          .from('usage_tracking')
+          .insert({ 
+            user_id: user.id, 
+            video_summaries_count: 0,
+            flashcard_sets_count: 0,
+            text_humanizations_count: 0,
+            reset_date: new Date().toISOString()
+          })
+          .single();
+          
+        if (insertError && insertError.code !== '23505') { // Ignore duplicate key errors
+          console.error('❌ Error creating default usage record:', insertError);
+        }
+      }
+
+      // Now check and increment usage
       const { data: allowed, error } = await supabase.rpc(
         'check_and_increment_usage',
         {
@@ -224,6 +324,8 @@ export function useUsage() {
       console.log('✅ Usage check result:', {
         allowed,
         error: error?.message,
+        userId: user.id,
+        usageType,
         timestamp: new Date().toISOString()
       });
 

@@ -44,14 +44,24 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
-  // If user is signed in and trying to access auth pages, redirect to dashboard
-  if (
-    user &&
-    (request.nextUrl.pathname === '/auth/signin' ||
-     request.nextUrl.pathname === '/auth/signup')
-  ) {
+  // Protected routes that require authentication
+  const protectedRoutes = [
+    '/dashboard',
+    '/lecture',
+    '/flashcards',
+    '/chat',
+    '/settings',
+  ]
+
+  // Check if the current path starts with any of the protected routes
+  const isProtectedRoute = protectedRoutes.some(route => 
+    request.nextUrl.pathname.startsWith(route)
+  )
+
+  if (!user && isProtectedRoute) {
+    // no user, redirect to the login page
     const url = request.nextUrl.clone()
-    url.pathname = '/dashboard'
+    url.pathname = '/login'
     return NextResponse.redirect(url)
   }
 

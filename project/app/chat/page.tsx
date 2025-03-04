@@ -32,6 +32,7 @@ import ReactMarkdown from "react-markdown";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { SharedHeader } from "@/components/shared-header";
 import { toast } from "@/components/ui/use-toast";
+import { RecentLectures } from "@/components/recent-lectures";
 
 interface Flashcard {
   id: string;
@@ -111,13 +112,69 @@ export default function ChatPage() {
   const [recentLectures, setRecentLectures] = useState<StoredLecture[]>([]);
 
   useEffect(() => {
-    // Get the tab from URL on initial load
+    // Get the tab and videoId from URL on initial load
     const searchParams = new URLSearchParams(window.location.search);
     const tabParam = searchParams.get('tab');
+    const videoIdParam = searchParams.get('videoId');
+    
     if (tabParam) {
       setActiveTab(tabParam);
     }
+    
+    // If videoId is provided in the URL, load the video data
+    if (videoIdParam) {
+      setVideoId(videoIdParam);
+      
+      // Find the lecture in recent lectures if it exists
+      const storedLectures = localStorage.getItem('recentLectures');
+      if (storedLectures) {
+        const lectures: StoredLecture[] = JSON.parse(storedLectures);
+        const matchingLecture = lectures.find(lecture => lecture.videoId === videoIdParam);
+        
+        if (matchingLecture) {
+          // Load the lecture data from localStorage
+          setSummary(matchingLecture.summary);
+          setVideoTranscript(matchingLecture.transcript);
+        } else {
+          // If not found in localStorage, fetch from API
+          fetchVideoData(videoIdParam);
+        }
+      } else {
+        // If no stored lectures, fetch from API
+        fetchVideoData(videoIdParam);
+      }
+    }
   }, []);
+
+  // Function to fetch video data by videoId
+  const fetchVideoData = async (videoId: string) => {
+    setIsProcessing(true);
+    setError(null);
+    
+    try {
+      const response = await fetch('/api/youtube/video', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ videoId }),
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to fetch video data');
+      }
+      
+      setSummary(data.summary);
+      setVideoTranscript(data.transcript);
+    } catch (error) {
+      console.error('Error fetching video data:', error);
+      setError(error instanceof Error ? error.message : 'Failed to fetch video data');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
 
   // Load recent lectures from localStorage on mount
   useEffect(() => {
@@ -172,17 +229,19 @@ export default function ChatPage() {
       setSummary(data.summary);
       setVideoTranscript(data.transcript);
 
-      // Create new lecture entry
+      // Create new lecture entry with the actual video title from the API
       const newLecture: StoredLecture = {
         id: Date.now().toString(),
         videoId: data.videoId,
-        title: data.title || 'Untitled Lecture',
+        title: data.title || `YouTube Video (${data.videoId})`, // Use the title from the API
         timestamp: new Date(),
-        duration: data.duration || '00:00',
+        duration: data.duration || 'PT00M00S',
         summary: data.summary,
         transcript: data.transcript,
         expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days from now
       };
+
+      console.log('Saving new lecture to localStorage:', newLecture);
 
       // Update recent lectures (keep only last 3)
       const updatedLectures = [newLecture, ...recentLectures].slice(0, 3);
@@ -258,6 +317,11 @@ export default function ChatPage() {
   const handleGenerateFlashcards = async () => {
     if (!videoTranscript) {
       console.error('No transcript available');
+      toast({
+        title: "Error",
+        description: "No transcript available to generate flashcards",
+        variant: "error"
+      });
       return;
     }
     
@@ -275,6 +339,19 @@ export default function ChatPage() {
       const data = await response.json();
       
       if (!response.ok) {
+        if (data.error === 'Usage limit reached') {
+          toast({
+            title: "Usage Limit Reached",
+            description: data.message || "You've reached your flashcard sets limit. Please upgrade your plan for more access.",
+            variant: "error"
+          });
+        } else {
+          toast({
+            title: "Error",
+            description: data.error || 'Failed to generate flashcards',
+            variant: "error"
+          });
+        }
         throw new Error(data.error || 'Failed to generate flashcards');
       }
 
@@ -296,7 +373,7 @@ export default function ChatPage() {
       }, 100);
     } catch (error) {
       console.error('Error generating flashcards:', error);
-      // You might want to show an error toast here
+      // Error toast is already shown above
     } finally {
       setIsGeneratingFlashcards(false);
     }
@@ -307,6 +384,20 @@ export default function ChatPage() {
     setVideoId(lecture.videoId);
     setSummary(lecture.summary);
     setVideoTranscript(lecture.transcript);
+  };
+
+  // Handle lecture selection
+  const handleLectureSelect = (lecture: any) => {
+    // Update state with the lecture data
+    setVideoId(lecture.videoId);
+    setSummary(lecture.summary);
+    setVideoTranscript(lecture.transcript);
+    
+    // Make sure we're on the YouTube tab
+    setActiveTab('youtube');
+    
+    // Update URL to reflect the current state
+    router.push(`/chat?tab=youtube&videoId=${lecture.videoId}`, { scroll: false });
   };
 
   return (
@@ -504,41 +595,12 @@ export default function ChatPage() {
                         <div className="border-t border-purple-500/10 pt-6">
                           <div className="flex items-center justify-between mb-4">
                             <h3 className="text-sm font-medium text-gray-600">Recent Lectures</h3>
-                            <Button variant="ghost" size="sm" className="text-purple-500 hover:text-purple-600 text-sm">
-                              View All
-                            </Button>
                           </div>
-                          <div className="space-y-3">
-                            {recentLectures.map((lecture) => (
-                              <Button
-                                key={lecture.id}
-                                variant="ghost"
-                                className="w-full p-2 h-auto flex items-start justify-between hover:bg-purple-500/5 transition-all group"
-                                onClick={() => handleLoadPreviousLecture(lecture)}
-                              >
-                                <div className="flex items-start space-x-3">
-                                  <div className="relative w-24 h-16 rounded-lg overflow-hidden flex-shrink-0 bg-purple-500/5">
-                                    <div className="absolute inset-0 flex items-center justify-center">
-                                      <Youtube className="h-6 w-6 text-purple-500" />
-                                    </div>
-                                  </div>
-                                  <div className="flex-1 text-left">
-                                    <p className="font-medium text-gray-900 text-sm line-clamp-2 group-hover:text-purple-600 transition-colors">
-                                      {lecture.title}
-                                    </p>
-                                    <div className="flex items-center space-x-2 mt-1">
-                                      <span className="text-xs text-gray-500">
-                                        {new Date(lecture.timestamp).toLocaleDateString()}
-                                      </span>
-                                      <span className="text-xs text-gray-400">•</span>
-                                      <span className="text-xs text-gray-500">{lecture.duration}</span>
-                                    </div>
-                                  </div>
-                                </div>
-                                <ChevronRight className="h-4 w-4 text-gray-400 group-hover:text-purple-500 transition-colors mt-2" />
-                              </Button>
-                            ))}
-                          </div>
+                          <RecentLectures 
+                            onLectureSelect={handleLectureSelect}
+                            limit={3}
+                            className="p-0 bg-transparent border-none shadow-none"
+                          />
                         </div>
                       </Card>
                     </div>
@@ -923,23 +985,6 @@ export default function ChatPage() {
                             </Button>
                           </div>
                         </div>
-                      </div>
-                    </div>
-                  </Card>
-
-                  {/* Quick Tips Card */}
-                  <Card className="p-4 bg-white/80 backdrop-blur-sm border-purple-500/10">
-                    <div className="flex items-start space-x-3">
-                      <div className="p-2 rounded-lg bg-purple-500/10">
-                        <Sparkles className="h-4 w-4 text-purple-500" />
-                      </div>
-                      <div>
-                        <h3 className="font-medium text-gray-900 mb-1">Pro Tips</h3>
-                        <ul className="text-sm text-gray-500 space-y-1 list-disc list-inside">
-                          <li>Use clear, concise sentences for better results</li>
-                          <li>Include context to improve humanization</li>
-                          <li>Review and edit the output for best results</li>
-                        </ul>
                       </div>
                     </div>
                   </Card>
