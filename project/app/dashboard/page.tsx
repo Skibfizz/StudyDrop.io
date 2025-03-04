@@ -13,7 +13,8 @@ import {
   Rocket,
   Star,
   Clock,
-  Users
+  Users,
+  CheckCircle
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -23,17 +24,50 @@ import { TierInfo } from "@/components/dashboard/tier-info";
 import { SubscriptionCard } from "@/components/dashboard/subscription-card";
 import { RecentLectures } from "@/components/recent-lectures";
 import { useUsage } from "@/lib/hooks/use-usage";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { SharedHeader } from "@/components/shared-header";
+import { isSuccessfulCheckout, isCanceledCheckout, getPlan } from "@/lib/stripe-client";
+import { toast } from "sonner";
 
 export default function DashboardPage() {
   const { refresh } = useUsage();
   const router = useRouter();
+  const [showSuccessMessage, setShowSuccessMessage] = useState(false);
+  const [upgradedPlan, setUpgradedPlan] = useState<string | null>(null);
 
   // Refresh usage data when dashboard page mounts
   useEffect(() => {
     refresh();
   }, [refresh]);
+
+  // Check for Stripe checkout success/error
+  useEffect(() => {
+    if (isSuccessfulCheckout()) {
+      const plan = getPlan();
+      setUpgradedPlan(plan || 'premium');
+      setShowSuccessMessage(true);
+      
+      // Show success toast
+      toast.success(
+        plan 
+          ? `Successfully upgraded to ${plan.charAt(0).toUpperCase() + plan.slice(1)} plan!` 
+          : 'Subscription updated successfully!'
+      );
+      
+      // Clear URL parameters after showing toast
+      const url = new URL(window.location.href);
+      url.search = '';
+      window.history.replaceState({}, '', url.toString());
+    } else if (isCanceledCheckout()) {
+      // Show canceled toast
+      toast.error('Subscription checkout was canceled. You can try again anytime.');
+      
+      // Clear URL parameters after showing toast
+      const url = new URL(window.location.href);
+      url.search = '';
+      window.history.replaceState({}, '', url.toString());
+    }
+  }, []);
 
   // Handle lecture selection
   const handleLectureSelect = (lecture: any) => {
@@ -84,6 +118,31 @@ export default function DashboardPage() {
       <SharedHeader />
 
       <main className="flex-1">
+        {/* Success Message */}
+        {showSuccessMessage && (
+          <div className="bg-green-500/10 border border-green-500/20 rounded-lg mx-auto max-w-7xl mt-6 p-4 flex items-center justify-between">
+            <div className="flex items-center">
+              <CheckCircle className="h-6 w-6 text-green-500 mr-3" />
+              <div>
+                <h3 className="font-medium text-green-700">Subscription Activated!</h3>
+                <p className="text-green-600 text-sm">
+                  {upgradedPlan 
+                    ? `Your ${upgradedPlan.charAt(0).toUpperCase() + upgradedPlan.slice(1)} plan is now active. Enjoy your enhanced features!` 
+                    : 'Your subscription has been updated successfully.'}
+                </p>
+              </div>
+            </div>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => setShowSuccessMessage(false)}
+              className="text-green-700 hover:text-green-800 hover:bg-green-500/10"
+            >
+              Dismiss
+            </Button>
+          </div>
+        )}
+
         {/* Hero Section */}
         <section className="relative px-6 pt-24 pb-16">
           {/* Background */}

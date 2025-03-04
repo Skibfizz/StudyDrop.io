@@ -9,30 +9,42 @@ export const stripe = new Stripe(stripeSecretKey, {
 });
 
 export const PLANS = {
-  basic: {
-    name: 'Basic',
+  free: {
+    name: 'Free',
     description: 'Perfect for getting started',
     features: [
-      'Access to AI-powered study tools',
-      'Basic flashcard creation',
-      'Limited YouTube video processing',
-      'Email support',
+      '5 Summarised Video lectures',
+      '5 FlashCard Sets (75)',
+      '10 text humanizations',
+      'C1 Generation Speed'
     ],
-    price: 9.99,
+    price: 0,
+    priceId: null, // Free plan doesn't have a price ID
+  },
+  basic: {
+    name: 'Basic',
+    description: 'For institutions & teams',
+    features: [
+      '20 Summarised Video lectures',
+      '20 Flashcard Sets (300)',
+      '40 Text humanizations',
+      'B1 Generation Speed'
+    ],
+    price: 1.99,
+    period: '/week',
     priceId: process.env.STRIPE_BASIC_PRICE_ID || 'price_placeholder',
   },
   pro: {
     name: 'Pro',
-    description: 'For serious learners',
+    description: 'For dedicated learners',
     features: [
-      'All Basic features',
-      'Unlimited flashcard creation',
-      'Advanced YouTube video processing',
-      'Priority support',
-      'Custom study plans',
-      'Progress analytics',
+      '1000 Summarised Video Lectures',
+      '1000 FlashCard Sets (15k)',
+      '500 Text Humanizations',
+      'A1-Super Generation Speed'
     ],
-    price: 19.99,
+    price: 3.99,
+    period: '/week',
     priceId: process.env.STRIPE_PRO_PRICE_ID || 'price_placeholder',
   },
 } as const;

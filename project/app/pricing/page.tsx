@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { MainNav } from "@/components/main-nav";
 import { UserNav } from "@/components/user-nav";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -11,19 +11,33 @@ import { Check, Sparkles, Brain, Zap, GraduationCap, Star, ArrowRight, Shield, C
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import Link from "next/link";
-import { useSession } from "next-auth/react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { SharedHeader } from "@/components/shared-header";
+import { useSubscription } from "@/lib/hooks/use-subscription";
+import { isCanceledCheckout } from "@/lib/stripe-client";
 
 export default function PricingPage() {
   const [isLoading, setIsLoading] = useState<string | null>(null);
-  const { data: session } = useSession();
   const [hoveredPlan, setHoveredPlan] = useState<string | null>(null);
   const router = useRouter();
+  const { subscription, loading, tier } = useSubscription();
+
+  // Check for canceled checkout
+  useEffect(() => {
+    if (isCanceledCheckout()) {
+      toast.error('Subscription checkout was canceled. You can try again anytime.');
+      
+      // Clear URL parameters after showing toast
+      const url = new URL(window.location.href);
+      url.search = '';
+      window.history.replaceState({}, '', url.toString());
+    }
+  }, []);
 
   const plans = [
     {
+      id: "free",
       name: "Free",
       description: "Perfect for getting started",
       price: "Free",
@@ -41,6 +55,7 @@ export default function PricingPage() {
       popular: false
     },
     {
+      id: "pro",
       name: "Pro",
       description: "For dedicated learners",
       price: "3.99",
@@ -58,6 +73,7 @@ export default function PricingPage() {
       popular: true
     },
     {
+      id: "basic",
       name: "Basic",
       description: "For institutions & teams",
       price: "1.99",
@@ -80,8 +96,16 @@ export default function PricingPage() {
     try {
       setIsLoading(planId);
 
-      if (!session) {
+      // Check if user is logged in
+      if (!subscription) {
         router.push('/auth/signin');
+        return;
+      }
+
+      // If the user is already on this plan, redirect to dashboard
+      if (tier === planId.toLowerCase()) {
+        toast.info(`You are already on the ${planId} plan`);
+        router.push('/dashboard');
         return;
       }
 
@@ -100,6 +124,15 @@ export default function PricingPage() {
       }
 
       const data = await response.json();
+      
+      // If it's the free plan, redirect to dashboard
+      if (planId.toLowerCase() === 'free' && data.success) {
+        toast.success('Successfully switched to Free plan');
+        router.push('/dashboard');
+        return;
+      }
+      
+      // Otherwise redirect to Stripe checkout
       window.location.href = data.url;
     } catch (error) {
       console.error('Error:', error);
@@ -145,7 +178,7 @@ export default function PricingPage() {
               <div 
                 key={plan.name} 
                 className={`relative group ${plan.popular ? 'lg:scale-105' : 'lg:scale-95'}`}
-                onMouseEnter={() => setHoveredPlan(plan.name)}
+                onMouseEnter={() => setHoveredPlan(plan.id)}
                 onMouseLeave={() => setHoveredPlan(null)}
               >
                 {plan.popular && (
@@ -158,9 +191,10 @@ export default function PricingPage() {
                   className={`
                     relative theme-card
                     ${plan.popular ? 'border-purple-500/50 bg-gradient-to-br from-purple-500/[0.15] to-blue-500/[0.15]' : 'border-foreground/10'} 
+                    ${tier === plan.id.toLowerCase() ? 'ring-2 ring-purple-500' : ''}
                     hover:border-foreground/20 transition-all duration-300 h-full 
                     transform hover:scale-[1.02] hover:shadow-xl hover:shadow-purple-500/10
-                    ${hoveredPlan === plan.name ? 'scale-[1.02]' : 'scale-100'}
+                    ${hoveredPlan === plan.id ? 'scale-[1.02]' : 'scale-100'}
                   `}
                 >
                   <CardHeader className="relative space-y-6 pb-8">
@@ -184,24 +218,35 @@ export default function PricingPage() {
                         </>
                       )}
                     </div>
+                    {tier === plan.id.toLowerCase() && (
+                      <div className="absolute top-2 right-2 bg-purple-500/20 text-purple-600 px-2 py-1 rounded-md text-xs font-medium">
+                        Current Plan
+                      </div>
+                    )}
                   </CardHeader>
                   <CardContent className="relative space-y-8">
                     <Button 
                       className={`
                         w-full ${plan.buttonColor} transform transition-all duration-300 
                         hover:scale-[1.02] h-12 group/button font-semibold text-foreground/90 shadow-lg shadow-purple-500/20
-                        ${hoveredPlan === plan.name ? 'scale-[1.02]' : 'scale-100'}
-                        ${isLoading === plan.name.toLowerCase() ? 'opacity-50 cursor-not-allowed' : ''}
+                        ${hoveredPlan === plan.id ? 'scale-[1.02]' : 'scale-100'}
+                        ${isLoading === plan.id ? 'opacity-50 cursor-not-allowed' : ''}
+                        ${tier === plan.id.toLowerCase() ? 'bg-green-500/20 hover:bg-green-500/30 text-green-600' : ''}
                       `}
                       variant={plan.popular ? "default" : "outline"}
-                      onClick={() => handleSubscribe(plan.name.toLowerCase())}
-                      disabled={isLoading === plan.name.toLowerCase()}
+                      onClick={() => handleSubscribe(plan.id)}
+                      disabled={isLoading === plan.id}
                     >
-                      {isLoading === plan.name.toLowerCase() ? (
+                      {isLoading === plan.id ? (
                         <div className="flex items-center">
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                           Processing...
                         </div>
+                      ) : tier === plan.id.toLowerCase() ? (
+                        <>
+                          Current Plan
+                          <Check className="ml-2 h-4 w-4" />
+                        </>
                       ) : (
                         <>
                           {plan.buttonText}
@@ -329,6 +374,7 @@ export default function PricingPage() {
               <Button 
                 size="lg" 
                 className="h-14 px-8 text-lg bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 transform hover:scale-105 transition-all group"
+                onClick={() => handleSubscribe('pro')}
               >
                 Get Started Now
                 <Sparkles className="ml-2 h-5 w-5 group-hover:animate-spin" />

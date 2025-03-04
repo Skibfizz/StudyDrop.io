@@ -21,13 +21,13 @@ export function ManageSubscription() {
   const { user } = useUser()
   const [subscription, setSubscription] = useState<SubscriptionData | null>(null)
 
-  const handleSubscribe = async (priceId: string) => {
+  const handleSubscribe = async (planId: string) => {
     try {
       setLoading(true)
       const response = await fetch('/api/stripe/create-checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ priceId }),
+        body: JSON.stringify({ planId }),
       })
 
       if (!response.ok) {
@@ -100,6 +100,19 @@ export function ManageSubscription() {
                 10 text humanizations per week
               </li>
             </ul>
+            <Button
+              className="w-full"
+              variant="outline"
+              onClick={() => handleSubscribe('free')}
+              disabled={loading}
+            >
+              {loading ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <CreditCard className="mr-2 h-4 w-4" />
+              )}
+              Get Free Plan
+            </Button>
           </div>
         </Card>
 
@@ -124,7 +137,7 @@ export function ManageSubscription() {
             </ul>
             <Button
               className="w-full bg-gradient-to-r from-purple-500 to-blue-500"
-              onClick={() => handleSubscribe(PLANS.basic.priceId)}
+              onClick={() => handleSubscribe('basic')}
               disabled={loading}
             >
               {loading ? (
@@ -158,7 +171,7 @@ export function ManageSubscription() {
             </ul>
             <Button
               className="w-full bg-gradient-to-r from-blue-500 to-purple-500"
-              onClick={() => handleSubscribe(PLANS.pro.priceId)}
+              onClick={() => handleSubscribe('pro')}
               disabled={loading}
             >
               {loading ? (

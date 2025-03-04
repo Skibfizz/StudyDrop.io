@@ -1,99 +1,113 @@
-import { useEffect, useState } from 'react';
-import { useSupabase } from '@/context/supabase-context';
+import { useState, useEffect } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
-import { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
+import { useUser } from './use-user';
 
 export type SubscriptionTier = 'free' | 'basic' | 'pro';
 
-interface Subscription {
+export interface Subscription {
+  id: string;
+  user_id: string;
   tier: SubscriptionTier;
-  current_period_end?: string;
+  stripe_subscription_id: string | null;
+  stripe_customer_id: string | null;
+  current_period_start: string | null;
+  current_period_end: string | null;
   cancel_at_period_end: boolean;
   status: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export function useSubscription() {
-  const { user } = useSupabase();
+  const { user } = useUser();
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
+  const [error, setError] = useState<Error | null>(null);
+
+  const fetchSubscription = async () => {
+    if (!user?.id) {
+      setLoading(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+
+      const supabase = createBrowserClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      );
+
+      const { data, error } = await supabase
+        .from('subscriptions')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      setSubscription(data as Subscription);
+    } catch (err) {
+      console.error('Error fetching subscription:', err);
+      setError(err as Error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchSubscription = async () => {
-      if (!user) {
-        setSubscription(null);
-        setLoading(false);
-        return;
-      }
-
-      try {
-        const { data, error } = await supabase
-          .from('subscriptions')
-          .select('*')
-          .eq('user_id', user.id)
-          .single();
-
-        if (error) throw error;
-
-        setSubscription(data);
-        setError(null);
-      } catch (err: any) {
-        console.error('Error fetching subscription:', err);
-        setError(err.message);
-        // Set default free tier if no subscription found
-        setSubscription({
-          tier: 'free',
-          cancel_at_period_end: false,
-          status: 'active'
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchSubscription();
+  }, [user?.id]);
 
-    // Subscribe to realtime subscription changes
-    const subscriptionChannel = supabase
-      .channel('subscription_changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'subscriptions',
-          filter: `user_id=eq.${user?.id}`,
-        },
-        (payload: RealtimePostgresChangesPayload<Subscription>) => {
-          console.log('Subscription changed:', payload);
-          if (payload.new && 'tier' in payload.new) {
-            setSubscription(payload.new as Subscription);
-          }
-        }
-      )
-      .subscribe();
+  const isSubscriptionActive = () => {
+    return (
+      subscription?.status === 'active' &&
+      (subscription?.tier === 'basic' || subscription?.tier === 'pro')
+    );
+  };
 
-    return () => {
-      subscriptionChannel.unsubscribe();
-    };
-  }, [user]);
+  const isSubscriptionExpiring = () => {
+    return (
+      subscription?.cancel_at_period_end === true &&
+      subscription?.current_period_end !== null
+    );
+  };
 
-  const isSubscribed = subscription?.tier !== 'free';
-  const isPro = subscription?.tier === 'pro';
-  const isBasic = subscription?.tier === 'basic';
-  const isCanceled = subscription?.cancel_at_period_end;
+  const getExpiryDate = () => {
+    if (!subscription?.current_period_end) return null;
+    return new Date(subscription.current_period_end);
+  };
+
+  const getRenewalDate = () => {
+    if (!subscription?.current_period_end || subscription?.cancel_at_period_end) return null;
+    return new Date(subscription.current_period_end);
+  };
+
+  const canAccessFeature = (feature: 'video_summaries' | 'flashcard_sets' | 'text_humanizations') => {
+    if (!subscription) return false;
+    
+    // Free tier has limited access
+    if (subscription.tier === 'free') {
+      return true; // They can access but with limits
+    }
+    
+    // Basic and Pro tiers have access to all features
+    return true;
+  };
 
   return {
     subscription,
     loading,
     error,
-    isSubscribed,
-    isPro,
-    isBasic,
-    isCanceled,
+    refresh: fetchSubscription,
+    isSubscriptionActive,
+    isSubscriptionExpiring,
+    getExpiryDate,
+    getRenewalDate,
+    canAccessFeature,
+    tier: subscription?.tier || 'free'
   };
 } 
