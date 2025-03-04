@@ -6,6 +6,7 @@ import { NavBar } from "@/components/ui/tubelight-navbar"
 import { useRouter } from "next/navigation"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { UserNav } from "@/components/user-nav"
+import { createBrowserClient } from "@supabase/ssr"
 
 export function HomepageNavbar() {
   const router = useRouter()
@@ -38,8 +39,30 @@ export function HomepageNavbar() {
     router.push(url)
   }
   
-  const handleTryFreeClick = () => {
-    router.push('/auth/signin')
+  const handleTryFreeClick = async () => {
+    console.log("Homepage navbar: Try for Free button clicked");
+    
+    // Check if user is already signed in
+    const supabase = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
+    
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    console.log("Homepage navbar: Session check result:", {
+      hasSession: !!session,
+      userId: session?.user?.id,
+      email: session?.user?.email
+    });
+    
+    if (session) {
+      console.log("Homepage navbar: User already signed in, redirecting to dashboard");
+      router.push('/dashboard');
+    } else {
+      console.log("Homepage navbar: User not signed in, redirecting to signin");
+      router.push('/auth/signin');
+    }
   }
 
   return (

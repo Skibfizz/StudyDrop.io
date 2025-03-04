@@ -28,8 +28,6 @@ export async function POST(req: Request) {
   }
 
   try {
-    console.log(`Processing webhook event: ${event.type}`);
-    
     switch (event.type) {
       case 'customer.subscription.created':
       case 'customer.subscription.updated':
@@ -47,21 +45,9 @@ export async function POST(req: Request) {
         await handleCheckoutComplete(checkoutSession);
         break;
         
-      case 'invoice.payment_succeeded':
-        const invoice = event.data.object as Stripe.Invoice;
-        if (invoice.subscription) {
-          const subscription = await stripe.subscriptions.retrieve(invoice.subscription as string);
-          await handleSubscriptionChange(subscription);
-        }
-        break;
-        
-      case 'invoice.payment_failed':
-        const failedInvoice = event.data.object as Stripe.Invoice;
-        if (failedInvoice.subscription) {
-          // Update subscription status to reflect payment failure
-          const subscription = await stripe.subscriptions.retrieve(failedInvoice.subscription as string);
-          await handleSubscriptionChange(subscription);
-        }
+      case 'payment_intent.succeeded':
+        const paymentIntent = event.data.object as Stripe.PaymentIntent;
+        await handlePaymentIntentSucceeded(paymentIntent);
         break;
 
       default:
@@ -111,8 +97,6 @@ async function handleSubscriptionChange(subscription: Stripe.Subscription) {
     }
   }
   
-  console.log(`Updating subscription for user ${userId} to tier ${tier}, status ${subscription.status}`);
-  
   // Update the subscription in the database
   const { error } = await supabase
     .from('subscriptions')
@@ -130,7 +114,6 @@ async function handleSubscriptionChange(subscription: Stripe.Subscription) {
     
   if (error) {
     console.error('Error updating subscription in database:', error);
-    throw error;
   }
 }
 
@@ -157,8 +140,6 @@ async function handleSubscriptionDeletion(subscription: Stripe.Subscription) {
     }
   }
   
-  console.log(`Handling subscription deletion for user ${userId}`);
-  
   // Update the subscription in the database to free tier
   const { error } = await supabase
     .from('subscriptions')
@@ -171,7 +152,6 @@ async function handleSubscriptionDeletion(subscription: Stripe.Subscription) {
     
   if (error) {
     console.error('Error updating subscription in database:', error);
-    throw error;
   }
 }
 
@@ -187,8 +167,6 @@ async function handleCheckoutComplete(session: Stripe.Checkout.Session) {
     return;
   }
   
-  console.log(`Handling checkout completion for user ${userId}`);
-  
   // Get the subscription ID
   const subscriptionId = session.subscription as string;
   
@@ -197,4 +175,102 @@ async function handleCheckoutComplete(session: Stripe.Checkout.Session) {
   
   // Update the subscription in the database
   await handleSubscriptionChange(subscription);
+}
+
+async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent) {
+  // This function handles payments from payment links
+  // We need to determine which plan was purchased and update the user's subscription
+  
+  // Check if this payment intent has metadata with user_id and plan
+  // If it does, we can use that directly
+  const userId = paymentIntent.metadata?.user_id;
+  const planId = paymentIntent.metadata?.plan;
+  
+  if (userId && planId) {
+    // We have all the information we need from metadata
+    await updateUserSubscription(userId, planId as 'basic' | 'pro');
+    return;
+  }
+  
+  // If we don't have metadata, we need to try to determine the plan from the amount
+  // and find the user from other sources
+  
+  // First, check if this payment is linked to a customer
+  const customerId = paymentIntent.customer as string;
+  if (!customerId) {
+    console.error('Payment intent has no customer ID and no user metadata:', paymentIntent.id);
+    return;
+  }
+  
+  // Look up the user by customer ID
+  const { data: subscriptionData } = await supabase
+    .from('subscriptions')
+    .select('user_id')
+    .eq('stripe_customer_id', customerId)
+    .single();
+    
+  if (!subscriptionData?.user_id) {
+    console.error('Could not find user for customer ID:', customerId);
+    return;
+  }
+  
+  // Determine the plan based on the amount paid
+  const amountPaid = paymentIntent.amount / 100; // Convert from cents to dollars/pounds
+  let tier: 'basic' | 'pro' = 'basic';
+  
+  if (amountPaid >= 3.99) {
+    tier = 'pro';
+  } else if (amountPaid >= 1.99) {
+    tier = 'basic';
+  }
+  
+  // Update the user's subscription
+  await updateUserSubscription(subscriptionData.user_id, tier);
+}
+
+async function updateUserSubscription(userId: string, tier: 'basic' | 'pro') {
+  // Calculate subscription period (1 week from now)
+  const now = new Date();
+  const oneWeekLater = new Date(now);
+  oneWeekLater.setDate(oneWeekLater.getDate() + 7);
+  
+  // Check if the user already has a subscription
+  const { data: subscription } = await supabase
+    .from('subscriptions')
+    .select('*')
+    .eq('user_id', userId)
+    .single();
+    
+  if (subscription) {
+    // Update existing subscription
+    const { error } = await supabase
+      .from('subscriptions')
+      .update({
+        tier,
+        status: 'active',
+        current_period_start: now.toISOString(),
+        current_period_end: oneWeekLater.toISOString(),
+        updated_at: now.toISOString()
+      })
+      .eq('user_id', userId);
+      
+    if (error) {
+      console.error('Error updating subscription in database:', error);
+    }
+  } else {
+    // Create new subscription
+    const { error } = await supabase
+      .from('subscriptions')
+      .insert({
+        user_id: userId,
+        tier,
+        status: 'active',
+        current_period_start: now.toISOString(),
+        current_period_end: oneWeekLater.toISOString()
+      });
+      
+    if (error) {
+      console.error('Error creating subscription in database:', error);
+    }
+  }
 } 

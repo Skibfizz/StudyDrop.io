@@ -1,36 +1,19 @@
 import { Card } from "@/components/ui/card";
 import { useUsage } from "@/lib/hooks/use-usage";
-import { Crown, CreditCard, Calendar, ArrowUpRight, Zap, Loader2 } from "lucide-react";
-import { useState } from "react";
+import { Crown } from "lucide-react";
+import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { useSubscription } from "@/lib/hooks/use-subscription";
+import { ArrowUpRight, Zap } from "lucide-react";
 
 export function SubscriptionCard() {
-  const { usageData, loading: usageLoading } = useUsage();
-  const { subscription, loading: subscriptionLoading, isSubscriptionActive, isSubscriptionExpiring, getExpiryDate, getRenewalDate } = useSubscription();
-  const [isLoading, setIsLoading] = useState(false);
+  const { usageData, loading, refresh } = useUsage();
 
-  const handleManageSubscription = async () => {
-    try {
-      setIsLoading(true);
-      const response = await fetch('/api/stripe/create-portal', {
-        method: 'POST',
-      });
+  // Refresh usage data when component mounts
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
 
-      if (!response.ok) {
-        throw new Error('Failed to create portal session');
-      }
-
-      const { url } = await response.json();
-      window.location.href = url;
-    } catch (error) {
-      console.error('Error:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  if (usageLoading || subscriptionLoading) {
+  if (loading) {
     return (
       <Card className="relative overflow-hidden border-border/40 p-6 backdrop-blur-sm bg-white/50">
         <div className="animate-pulse space-y-2">
@@ -46,7 +29,7 @@ export function SubscriptionCard() {
     );
   }
 
-  if (!usageData || !subscription) {
+  if (!usageData) {
     return null;
   }
 
@@ -91,10 +74,7 @@ export function SubscriptionCard() {
     }
   };
 
-  const tierDetails = getTierDetails(subscription.tier);
-  const hasActiveSubscription = isSubscriptionActive();
-  const expiryDate = getExpiryDate();
-  const renewalDate = getRenewalDate();
+  const tierDetails = getTierDetails(usageData.tier);
 
   return (
     <Card className="relative overflow-hidden border-border/40 transition-all duration-300 hover:border-primary/40 hover:shadow-xl group-hover:shadow-purple-500/20 p-6 backdrop-blur-sm bg-white/50">
@@ -109,41 +89,6 @@ export function SubscriptionCard() {
         
         <h3 className="text-lg font-semibold mt-2">Your Subscription</h3>
         <p className="text-sm text-muted-foreground">{tierDetails.description}</p>
-        
-        {/* Subscription details */}
-        {hasActiveSubscription && (expiryDate || renewalDate) && (
-          <div className="mt-4 space-y-2 border-t pt-3 border-border/40">
-            <div className="flex items-center text-sm">
-              <Calendar className="h-4 w-4 mr-2 text-muted-foreground" />
-              <span className="text-muted-foreground">
-                {isSubscriptionExpiring() 
-                  ? `Expires on ${expiryDate?.toLocaleDateString()}`
-                  : `Renews on ${renewalDate?.toLocaleDateString()}`
-                }
-              </span>
-            </div>
-            
-            <Button 
-              variant="outline" 
-              size="sm" 
-              className="w-full mt-2 border-border/40"
-              onClick={handleManageSubscription}
-              disabled={isLoading}
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Loading...
-                </>
-              ) : (
-                <>
-                  <CreditCard className="mr-2 h-4 w-4" />
-                  Manage Subscription
-                </>
-              )}
-            </Button>
-          </div>
-        )}
         
         {tierDetails.nextTier && (
           <Button 

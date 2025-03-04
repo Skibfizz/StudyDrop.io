@@ -14,26 +14,43 @@ import Link from "next/link";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { SharedHeader } from "@/components/shared-header";
-import { useSubscription } from "@/lib/hooks/use-subscription";
-import { isCanceledCheckout } from "@/lib/stripe-client";
+import { createBrowserClient } from "@supabase/ssr";
+import { PAYMENT_LINKS } from '@/lib/payment-links';
 
 export default function PricingPage() {
   const [isLoading, setIsLoading] = useState<string | null>(null);
+  const [currentPlan, setCurrentPlan] = useState<string | null>(null);
   const [hoveredPlan, setHoveredPlan] = useState<string | null>(null);
   const router = useRouter();
-  const { subscription, loading, tier } = useSubscription();
+  const supabase = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
 
-  // Check for canceled checkout
+  // Fetch the user's current subscription tier
   useEffect(() => {
-    if (isCanceledCheckout()) {
-      toast.error('Subscription checkout was canceled. You can try again anytime.');
-      
-      // Clear URL parameters after showing toast
-      const url = new URL(window.location.href);
-      url.search = '';
-      window.history.replaceState({}, '', url.toString());
+    async function fetchUserSubscription() {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (!session?.user) return;
+        
+        const { data: subscription, error } = await supabase
+          .from('subscriptions')
+          .select('tier')
+          .eq('user_id', session.user.id)
+          .single();
+          
+        if (subscription) {
+          setCurrentPlan(subscription.tier);
+        }
+      } catch (error) {
+        console.error('Error fetching subscription:', error);
+      }
     }
-  }, []);
+    
+    fetchUserSubscription();
+  }, [supabase]);
 
   const plans = [
     {
@@ -96,46 +113,106 @@ export default function PricingPage() {
     try {
       setIsLoading(planId);
 
-      // Check if user is logged in
-      if (!subscription) {
+      console.log("handleSubscribe called for plan:", planId);
+      
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      console.log("Auth session check result:", {
+        hasSession: !!session,
+        userId: session?.user?.id,
+        email: session?.user?.email,
+      });
+      
+      if (!session) {
+        console.log("No session detected, redirecting to signin");
         router.push('/auth/signin');
         return;
       }
 
       // If the user is already on this plan, redirect to dashboard
-      if (tier === planId.toLowerCase()) {
+      if (currentPlan === planId.toLowerCase()) {
+        console.log("User already on plan:", planId);
         toast.info(`You are already on the ${planId} plan`);
         router.push('/dashboard');
         return;
       }
 
-      const response = await fetch('/api/stripe/create-checkout', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          planId,
-        }),
-      });
+      // For free plan, update directly without Stripe
+      if (planId.toLowerCase() === 'free') {
+        console.log("Processing free plan subscription");
+        const response = await fetch('/api/stripe/create-checkout', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            planId,
+          }),
+        });
 
-      if (!response.ok) {
-        throw new Error('Failed to create checkout session');
-      }
+        console.log("Free plan API response status:", response.status);
 
-      const data = await response.json();
-      
-      // If it's the free plan, redirect to dashboard
-      if (planId.toLowerCase() === 'free' && data.success) {
+        if (!response.ok) {
+          throw new Error('Failed to update subscription');
+        }
+
+        const data = await response.json();
+        console.log("Free plan API response data:", data);
+        
         toast.success('Successfully switched to Free plan');
         router.push('/dashboard');
         return;
       }
       
-      // Otherwise redirect to Stripe checkout
+      // For paid plans, prepare the payment link
+      const normalizedPlanId = planId.toLowerCase();
+      console.log("Processing paid plan:", normalizedPlanId);
+      
+      const response = await fetch('/api/stripe/prepare-payment-link', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          planId: normalizedPlanId,
+        }),
+      });
+      
+      console.log("Payment link API response status:", response.status);
+      
+      if (!response.ok) {
+        console.log("Payment link preparation failed, falling back to checkout");
+        // Fallback to the old checkout method if prepare-payment-link fails
+        const fallbackResponse = await fetch('/api/stripe/create-checkout', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            planId,
+          }),
+        });
+
+        console.log("Fallback API response status:", fallbackResponse.status);
+
+        if (!fallbackResponse.ok) {
+          throw new Error('Failed to create checkout session');
+        }
+
+        const fallbackData = await fallbackResponse.json();
+        console.log("Redirecting to fallback URL:", fallbackData.url);
+        window.location.href = fallbackData.url;
+        return;
+      }
+      
+      const data = await response.json();
+      console.log("Payment link data:", data);
+      
+      // Redirect to the payment link
+      console.log("Redirecting to payment link:", data.url);
       window.location.href = data.url;
     } catch (error) {
-      console.error('Error:', error);
+      console.error('Error in handleSubscribe:', error);
       toast.error('Something went wrong. Please try again.');
     } finally {
       setIsLoading(null);
@@ -191,7 +268,7 @@ export default function PricingPage() {
                   className={`
                     relative theme-card
                     ${plan.popular ? 'border-purple-500/50 bg-gradient-to-br from-purple-500/[0.15] to-blue-500/[0.15]' : 'border-foreground/10'} 
-                    ${tier === plan.id.toLowerCase() ? 'ring-2 ring-purple-500' : ''}
+                    ${currentPlan === plan.id.toLowerCase() ? 'ring-2 ring-purple-500' : ''}
                     hover:border-foreground/20 transition-all duration-300 h-full 
                     transform hover:scale-[1.02] hover:shadow-xl hover:shadow-purple-500/10
                     ${hoveredPlan === plan.id ? 'scale-[1.02]' : 'scale-100'}
@@ -218,7 +295,7 @@ export default function PricingPage() {
                         </>
                       )}
                     </div>
-                    {tier === plan.id.toLowerCase() && (
+                    {currentPlan === plan.id.toLowerCase() && (
                       <div className="absolute top-2 right-2 bg-purple-500/20 text-purple-600 px-2 py-1 rounded-md text-xs font-medium">
                         Current Plan
                       </div>
@@ -231,7 +308,7 @@ export default function PricingPage() {
                         hover:scale-[1.02] h-12 group/button font-semibold text-foreground/90 shadow-lg shadow-purple-500/20
                         ${hoveredPlan === plan.id ? 'scale-[1.02]' : 'scale-100'}
                         ${isLoading === plan.id ? 'opacity-50 cursor-not-allowed' : ''}
-                        ${tier === plan.id.toLowerCase() ? 'bg-green-500/20 hover:bg-green-500/30 text-green-600' : ''}
+                        ${currentPlan === plan.id.toLowerCase() ? 'bg-green-500/20 hover:bg-green-500/30 text-green-600' : ''}
                       `}
                       variant={plan.popular ? "default" : "outline"}
                       onClick={() => handleSubscribe(plan.id)}
@@ -242,7 +319,7 @@ export default function PricingPage() {
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                           Processing...
                         </div>
-                      ) : tier === plan.id.toLowerCase() ? (
+                      ) : currentPlan === plan.id.toLowerCase() ? (
                         <>
                           Current Plan
                           <Check className="ml-2 h-4 w-4" />
@@ -374,7 +451,26 @@ export default function PricingPage() {
               <Button 
                 size="lg" 
                 className="h-14 px-8 text-lg bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 transform hover:scale-105 transition-all group"
-                onClick={() => handleSubscribe('pro')}
+                onClick={() => {
+                  console.log("Pricing page: Get Started Now button clicked");
+                  // Check if we already have a session before calling handleSubscribe
+                  supabase.auth.getSession().then(({ data: { session } }) => {
+                    console.log("Pricing page: Session check result:", {
+                      hasSession: !!session,
+                      userId: session?.user?.id,
+                      email: session?.user?.email
+                    });
+                    
+                    if (session) {
+                      // User is authenticated, proceed with subscription
+                      handleSubscribe('pro');
+                    } else {
+                      // User is not authenticated, redirect to signin
+                      console.log("Pricing page: No session detected, redirecting to signin");
+                      router.push('/auth/signin');
+                    }
+                  });
+                }}
               >
                 Get Started Now
                 <Sparkles className="ml-2 h-5 w-5 group-hover:animate-spin" />

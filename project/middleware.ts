@@ -9,6 +9,8 @@ type CookieValue = {
 }
 
 export async function middleware(request: NextRequest) {
+  console.log("Middleware called for path:", request.nextUrl.pathname);
+  
   // Create a response object that we'll modify and return
   let supabaseResponse = NextResponse.next({
     request,
@@ -43,6 +45,13 @@ export async function middleware(request: NextRequest) {
   const {
     data: { user },
   } = await supabase.auth.getUser()
+  
+  console.log("Middleware auth check result:", {
+    hasUser: !!user,
+    userId: user?.id,
+    email: user?.email,
+    path: request.nextUrl.pathname
+  });
 
   // Protected routes that require authentication
   const protectedRoutes = [
@@ -57,15 +66,22 @@ export async function middleware(request: NextRequest) {
   const isProtectedRoute = protectedRoutes.some(route => 
     request.nextUrl.pathname.startsWith(route)
   )
+  
+  console.log("Route protection check:", {
+    isProtectedRoute,
+    path: request.nextUrl.pathname
+  });
 
   if (!user && isProtectedRoute) {
     // no user, redirect to the login page
+    console.log("No user detected for protected route, redirecting to login");
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     return NextResponse.redirect(url)
   }
 
   // IMPORTANT: You must return the supabaseResponse object as it is
+  console.log("Middleware completed for path:", request.nextUrl.pathname);
   return supabaseResponse
 }
 

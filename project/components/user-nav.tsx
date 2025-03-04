@@ -33,8 +33,10 @@ export function UserNav() {
   }
 
   const handleSignOut = async () => {
+    console.log("UserNav: handleSignOut called");
     await signOut();
-    router.push('/auth/signin');
+    console.log("UserNav: signOut completed, no additional redirect needed");
+    // The signOut function already handles the redirect, so we don't need to do it here
   };
 
   // Get user display info from Supabase user metadata

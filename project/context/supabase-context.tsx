@@ -19,24 +19,50 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    console.log("SupabaseProvider: Initializing auth state");
+    
     // Check current user on mount
     getCurrentUser()
       .then(user => {
+        console.log("SupabaseProvider: getCurrentUser result:", {
+          hasUser: !!user,
+          userId: user?.id,
+          email: user?.email
+        });
         setUser(user);
       })
-      .catch(console.error)
-      .finally(() => setLoading(false));
+      .catch(error => {
+        console.error("SupabaseProvider: Error getting current user:", error);
+      })
+      .finally(() => {
+        console.log("SupabaseProvider: Finished initial auth check");
+        setLoading(false);
+      });
 
     // Subscribe to auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log("SupabaseProvider: Auth state changed:", {
+        event,
+        hasSession: !!session,
+        userId: session?.user?.id,
+        email: session?.user?.email
+      });
       setUser(session?.user ?? null);
       setLoading(false);
     });
 
     return () => {
+      console.log("SupabaseProvider: Unsubscribing from auth changes");
       subscription.unsubscribe();
     };
   }, []);
+
+  console.log("SupabaseProvider: Current auth state:", {
+    hasUser: !!user,
+    userId: user?.id,
+    email: user?.email,
+    loading
+  });
 
   return (
     <SupabaseContext.Provider value={{ user, loading }}>

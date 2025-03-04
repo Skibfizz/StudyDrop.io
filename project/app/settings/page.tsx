@@ -27,7 +27,9 @@ export default function SettingsPage() {
   const { toast } = useToast();
 
   const handleSignOut = async () => {
-    await signOut({ callbackUrl: "/" });
+    console.log("Settings page: handleSignOut called");
+    await signOut();
+    console.log("Settings page: signOut completed, no additional redirect needed");
   };
 
   const handleManageSubscription = async () => {

@@ -19,11 +19,75 @@ import { cn } from "@/lib/utils";
 import { RainbowButton } from "@/components/ui/rainbow-button";
 import { AvatarCircles } from "@/components/ui/avatar-circles";
 import { StarRating } from "@/components/ui/star-rating";
+import { createBrowserClient } from "@supabase/ssr";
+import { User } from "@supabase/supabase-js";
 
 export default function Home() {
   const router = useRouter();
   const { data: session } = useSession();
   const { theme } = useTheme();
+  const [supabaseUser, setSupabaseUser] = useState<User | null>(null);
+  
+  console.log("Home page component: Session data on render:", {
+    nextAuthSessionExists: !!session,
+    nextAuthSessionUser: session?.user,
+    supabaseUserExists: !!supabaseUser
+  });
+  
+  // Add an effect to check Supabase authentication
+  useEffect(() => {
+    const checkSupabaseAuth = async () => {
+      const supabase = createBrowserClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      );
+      
+      const { data: { session: supabaseSession } } = await supabase.auth.getSession();
+      console.log("Home page component: Supabase session check:", {
+        hasSession: !!supabaseSession,
+        userId: supabaseSession?.user?.id,
+        email: supabaseSession?.user?.email
+      });
+      
+      setSupabaseUser(supabaseSession?.user || null);
+    };
+    
+    checkSupabaseAuth();
+  }, []);
+  
+  // Add an effect to log when session changes
+  useEffect(() => {
+    console.log("Home page component: NextAuth session data changed:", {
+      sessionExists: !!session,
+      sessionUser: session?.user
+    });
+  }, [session]);
+  
+  // Function to handle authentication check and redirection
+  const handleAuthCheck = async () => {
+    console.log("Home page: Checking auth with Supabase");
+    
+    const supabase = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
+    
+    const { data: { session: supabaseSession } } = await supabase.auth.getSession();
+    
+    console.log("Home page: Supabase auth check result:", {
+      hasSession: !!supabaseSession,
+      userId: supabaseSession?.user?.id,
+      email: supabaseSession?.user?.email
+    });
+    
+    if (supabaseSession) {
+      console.log("Home page: Supabase user is authenticated, redirecting to dashboard");
+      router.push('/dashboard');
+    } else {
+      console.log("Home page: Supabase user is not authenticated, redirecting to signin");
+      router.push('/auth/signin');
+    }
+  };
 
   const reviews = [
     {
@@ -106,7 +170,7 @@ export default function Home() {
             </h1>
             
             <div className="mt-4 mb-8">
-              <RainbowButton onClick={() => router.push('/auth/signin')}>
+              <RainbowButton onClick={handleAuthCheck}>
                 Get started - It's Free
               </RainbowButton>
               <div className="flex flex-row items-center justify-center gap-6 mt-6 w-full mx-auto">
@@ -258,7 +322,7 @@ export default function Home() {
               <Button 
                 size="lg" 
                 className="h-14 px-8 text-lg bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 transform hover:scale-105 transition-all"
-                onClick={() => router.push('/auth/signin')}
+                onClick={handleAuthCheck}
               >
                 Get Started Now
                 <Sparkles className="ml-2 h-5 w-5" />

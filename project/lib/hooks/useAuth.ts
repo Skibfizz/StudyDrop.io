@@ -28,32 +28,40 @@ export function useAuth() {
   }, [])
 
   const signOut = async () => {
+    console.log("useAuth: signOut function called");
     try {
       // First, sign out from Supabase
+      console.log("useAuth: Signing out from Supabase");
       await supabase.auth.signOut()
       
       // Then, sign out from NextAuth if it's being used
       try {
+        console.log("useAuth: Attempting to sign out from NextAuth");
         await nextAuthSignOut({ redirect: false })
+        console.log("useAuth: Successfully signed out from NextAuth");
       } catch (nextAuthError) {
-        console.log('NextAuth not in use or error:', nextAuthError)
+        console.log('useAuth: NextAuth not in use or error:', nextAuthError)
       }
       
       // Clear any local storage items that might be storing auth state
+      console.log("useAuth: Clearing localStorage");
       localStorage.clear()
       
       // Clear any cookies
+      console.log("useAuth: Clearing cookies");
       document.cookie.split(';').forEach(cookie => {
         const [name] = cookie.trim().split('=')
         document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`
       })
       
       // Force reload the page to ensure all auth states are cleared
-      window.location.href = '/auth/signin'
+      console.log("useAuth: Redirecting to root path '/'");
+      window.location.href = '/'
     } catch (error) {
-      console.error('Error signing out:', error)
+      console.error('useAuth: Error signing out:', error)
       // If there's an error, force reload anyway
-      window.location.href = '/auth/signin'
+      console.log("useAuth: Error occurred, still redirecting to root path '/'");
+      window.location.href = '/'
     }
   }
 
