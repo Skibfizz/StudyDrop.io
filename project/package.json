@@ -6,8 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
-    "postinstall": "pip install -r scripts/requirements.txt || pip3 install -r scripts/requirements.txt || echo 'Python dependencies installation failed, but continuing build'"
+    "lint": "next lint"
   },
   "dependencies": {
     "@auth/core": "^0.34.2",
