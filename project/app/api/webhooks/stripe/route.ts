@@ -5,22 +5,42 @@ import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
 
 // Initialize Supabase client with service role key for admin access
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+// Use a try-catch block to handle missing environment variables during build
+let supabase: any;
+try {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  
+  if (!supabaseUrl || !supabaseServiceRoleKey) {
+    console.warn('Supabase URL or Service Role Key is missing. Webhook functionality will be limited.');
+  } else {
+    supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
+  }
+} catch (error) {
+  console.error('Error initializing Supabase client:', error);
+}
 
 export async function POST(req: Request) {
+  // Check if Supabase client is initialized
+  if (!supabase) {
+    return new NextResponse('Supabase client not initialized', { status: 500 });
+  }
+
   const body = await req.text();
   const signature = headers().get('Stripe-Signature') as string;
 
   let event: Stripe.Event;
 
   try {
+    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+    if (!webhookSecret) {
+      return new NextResponse('Stripe webhook secret is missing', { status: 500 });
+    }
+
     event = stripe.webhooks.constructEvent(
       body,
       signature,
-      process.env.STRIPE_WEBHOOK_SECRET!
+      webhookSecret
     );
   } catch (error) {
     console.error('Error verifying webhook signature:', error);
