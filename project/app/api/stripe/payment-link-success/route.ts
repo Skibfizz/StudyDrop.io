@@ -19,7 +19,7 @@ export async function GET(req: Request) {
     
     if (!paymentIntentId) {
       return NextResponse.redirect(
-        `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/pricing?error=missing_payment_intent`
+        `${process.env.NEXT_PUBLIC_APP_URL || 'https://studydrop.io'}/pricing?error=missing_payment_intent`
       );
     }
 
@@ -77,7 +77,7 @@ export async function GET(req: Request) {
     if (!session?.user && !isAnonymous) {
       console.log("No authenticated user and no anonymous tracking, redirecting to sign in");
       return NextResponse.redirect(
-        `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/auth/signin?redirect=/api/stripe/payment-link-success?payment_intent=${paymentIntentId}`
+        `${process.env.NEXT_PUBLIC_APP_URL || 'https://studydrop.io'}/auth/signin?redirect=/api/stripe/payment-link-success?payment_intent=${paymentIntentId}`
       );
     }
 
@@ -86,7 +86,7 @@ export async function GET(req: Request) {
     
     if (!paymentIntent || paymentIntent.status !== 'succeeded') {
       return NextResponse.redirect(
-        `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/pricing?error=payment_failed`
+        `${process.env.NEXT_PUBLIC_APP_URL || 'https://studydrop.io'}/pricing?error=payment_failed`
       );
     }
 
@@ -169,7 +169,7 @@ export async function GET(req: Request) {
 
       // Redirect to dashboard with success message
       return NextResponse.redirect(
-        `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/dashboard?success=true&plan=${tier}`
+        `${process.env.NEXT_PUBLIC_APP_URL || 'https://studydrop.io'}/dashboard?success=true&plan=${tier}`
       );
     } 
     // For anonymous users, store the payment info and redirect to sign up
@@ -193,7 +193,7 @@ export async function GET(req: Request) {
       
       // Set a cookie with the payment information that will be used after sign up
       const response = NextResponse.redirect(
-        `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/auth/signin?redirect=/dashboard&message=payment_success`
+        `${process.env.NEXT_PUBLIC_APP_URL || 'https://studydrop.io'}/auth/signin?redirect=/dashboard&message=payment_success`
       );
       
       response.cookies.set('studydrop_pending_subscription', JSON.stringify({
@@ -213,12 +213,12 @@ export async function GET(req: Request) {
     
     // Fallback redirect
     return NextResponse.redirect(
-      `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/pricing?error=processing_error`
+      `${process.env.NEXT_PUBLIC_APP_URL || 'https://studydrop.io'}/pricing?error=processing_error`
     );
   } catch (error) {
     console.error('Error processing payment link success:', error);
     return NextResponse.redirect(
-      `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/pricing?error=processing_error`
+      `${process.env.NEXT_PUBLIC_APP_URL || 'https://studydrop.io'}/pricing?error=processing_error`
     );
   }
 } 

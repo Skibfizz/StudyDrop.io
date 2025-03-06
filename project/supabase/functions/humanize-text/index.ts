@@ -9,7 +9,7 @@ serve(async (req) => {
 
   // Always include CORS headers
   const corsHeaders = {
-    'Access-Control-Allow-Origin': req.headers.get('origin') || 'http://localhost:3000',
+    'Access-Control-Allow-Origin': req.headers.get('origin') || 'https://studydrop.io',
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
     'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
     'Access-Control-Max-Age': '86400',

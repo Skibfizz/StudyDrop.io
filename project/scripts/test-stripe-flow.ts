@@ -55,7 +55,7 @@ async function testStripeFlow() {
     console.log('\n5️⃣ Testing customer portal session...');
     const portalSession = await stripe.billingPortal.sessions.create({
       customer: customer.id,
-      return_url: 'http://localhost:3000/dashboard',
+      return_url: 'https://studydrop.io/dashboard',
     });
     console.log('✅ Customer portal session created');
 

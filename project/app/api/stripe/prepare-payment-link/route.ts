@@ -181,7 +181,7 @@ export async function POST(req: Request) {
     }
     
     // Create a custom success URL with query parameters to track the payment
-    const successUrl = new URL(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/stripe/payment-link-success`);
+    const successUrl = new URL(`${process.env.NEXT_PUBLIC_APP_URL || 'https://studydrop.io'}/api/stripe/payment-link-success`);
     successUrl.searchParams.append('payment_link', paymentLinkId);
     if (isAnonymous) {
       successUrl.searchParams.append('anonymous_id', userId);

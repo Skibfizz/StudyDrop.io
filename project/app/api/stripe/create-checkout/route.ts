@@ -64,7 +64,7 @@ export async function POST(req: Request) {
 
       return NextResponse.json({ 
         success: true,
-        url: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/dashboard?success=true&plan=free` 
+        url: `${process.env.NEXT_PUBLIC_APP_URL || 'https://studydrop.io'}/dashboard?success=true&plan=free` 
       });
     }
 
@@ -82,8 +82,8 @@ export async function POST(req: Request) {
 
     // Create a checkout session
     const stripeSession = await stripe.checkout.sessions.create({
-      success_url: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/dashboard?success=true&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/pricing?canceled=true`,
+      success_url: `${process.env.NEXT_PUBLIC_APP_URL || 'https://studydrop.io'}/dashboard?success=true&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${process.env.NEXT_PUBLIC_APP_URL || 'https://studydrop.io'}/pricing?canceled=true`,
       customer: subscription?.stripe_customer_id || undefined,
       customer_email: !subscription?.stripe_customer_id ? session.user.email! : undefined,
       mode: 'subscription',
