@@ -4,14 +4,20 @@ import { cookies } from 'next/headers';
 import { stripe } from '@/lib/stripe';
 import { PAYMENT_LINKS, getPaymentLinkIdFromUrl } from '@/lib/payment-links';
 
+// Set dynamic to force-dynamic to ensure this route is always server-rendered
+export const dynamic = 'force-dynamic';
+
 export async function GET(req: Request) {
   try {
-    const url = new URL(req.url);
-    const paymentIntentId = url.searchParams.get('payment_intent');
-    const paymentLinkId = url.searchParams.get('payment_link');
-    const anonymousId = url.searchParams.get('anonymous_id');
+    console.log("Payment link success handler called");
     
-    console.log("Payment link success handler called:", {
+    // Use searchParams from the request object
+    const { searchParams } = new URL(req.url);
+    const paymentIntentId = searchParams.get('payment_intent');
+    const paymentLinkId = searchParams.get('payment_link');
+    const anonymousId = searchParams.get('anonymous_id');
+    
+    console.log("Payment link success parameters:", {
       paymentIntentId,
       paymentLinkId,
       anonymousId
