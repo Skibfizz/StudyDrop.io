@@ -3,12 +3,6 @@
   "outputDirectory": ".next",
   "installCommand": "npm install",
   "framework": "nextjs",
-  "functions": {
-    "api/youtube/**": {
-      "runtime": "nodejs18.x",
-      "memory": 1024
-    }
-  },
   "build": {
     "env": {
       "PYTHON_VERSION": "3.12",

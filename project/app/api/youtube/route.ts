@@ -7,6 +7,14 @@ import { cookies } from 'next/headers';
 import fetch from 'node-fetch';
 import { saveVideoSummary } from '@/lib/video-helpers';
 
+// Add logging to help diagnose deployment issues
+console.log('YouTube API route loaded');
+console.log('Node.js version:', process.version);
+console.log('Environment:', process.env.NODE_ENV);
+console.log('OPENAI_API_KEY exists:', !!process.env.OPENAI_API_KEY);
+console.log('NEXT_PUBLIC_SUPABASE_URL exists:', !!process.env.NEXT_PUBLIC_SUPABASE_URL);
+console.log('NEXT_PUBLIC_SUPABASE_ANON_KEY exists:', !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+
 const execAsync = promisify(exec);
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -210,168 +218,46 @@ async function getTranscript(videoId: string) {
         PATH: process.env.PATH,
         PYTHONPATH: process.env.PYTHONPATH,
         VERCEL_REGION: process.env.VERCEL_REGION,
-        VERCEL_ENV: process.env.VERCEL_ENV
-      },
-      directories: {
-        cwd: require('fs').readdirSync(process.cwd()),
-        scripts: require('fs').existsSync(path.join(process.cwd(), 'scripts')) 
-          ? require('fs').readdirSync(path.join(process.cwd(), 'scripts')) 
-          : 'Directory not found'
+        VERCEL_ENV: process.env.VERCEL_ENV,
+        NODE_ENV: process.env.NODE_ENV
       }
     });
     
-    // Method 1: Try to use Python serverless function if available
-    try {
-      console.log('Attempting to use Python serverless function');
-      const apiUrl = process.env.VERCEL_ENV === 'development' 
-        ? `http://localhost:3000/api/python/get_transcript?videoId=${videoId}`
-        : `${process.env.NEXT_PUBLIC_APP_URL || 'https://studydrop.io'}/api/python/get_transcript?videoId=${videoId}`;
-      
-      console.log(`Fetching transcript from Python serverless function: ${apiUrl}`);
-      
-      const response = await fetch(apiUrl);
-      const data = await response.json();
-      
-      if (data.success && data.transcript) {
-        console.log('Successfully fetched transcript with Python serverless function');
-        return data.transcript;
-      } else {
-        console.log('Python serverless function failed:', data.error);
-        throw new Error(data.error || 'Failed to fetch transcript with Python serverless function');
-      }
-    } catch (serverlessError) {
-      console.error('Error with Python serverless function:', 
-        serverlessError instanceof Error ? serverlessError.message : String(serverlessError));
-      console.log('Falling back to other methods');
-    }
+    console.log(`Attempting to execute Python script: python ${scriptPath} ${videoId}`);
     
-    // Method 2: Try to use Python script if available
     try {
-      console.log('Using Python script to fetch transcript');
-      const { stdout: python3VersionOutput } = await execAsync('python3 --version');
-      console.log('Python3 version check:', python3VersionOutput);
+      // First try using the Python script
+      const { stdout, stderr } = await execAsync(`python ${scriptPath} ${videoId}`);
       
-      // Use python3 for Vercel environment
-      const pythonCommand = 'python3';
-      console.log(`Using ${pythonCommand} in Vercel environment`);
+      if (stderr) {
+        console.warn('Python script stderr:', stderr);
+      }
       
-      // Get the absolute path to the script
-      const scriptPath = path.join(process.cwd(), 'project', 'scripts', 'get_transcript.py');
-      const altScriptPath = path.join(process.cwd(), 'scripts', 'get_transcript.py');
+      console.log('Python script stdout length:', stdout.length);
       
-      // Check which path exists
-      const scriptExists = require('fs').existsSync(scriptPath);
-      const altScriptExists = require('fs').existsSync(altScriptPath);
-      
-      console.log('Script path checks:', {
-        scriptPath,
-        altScriptPath,
-        scriptExists,
-        altScriptExists
-      });
-      
-      // Use the path that exists
-      const finalScriptPath = scriptExists ? scriptPath : (altScriptExists ? altScriptPath : null);
-      
-      if (finalScriptPath) {
-        console.log(`Executing command: ${pythonCommand} "${finalScriptPath}" ${videoId}`);
-        const { stdout, stderr } = await execAsync(`${pythonCommand} "${finalScriptPath}" ${videoId}`);
-        
-        console.log('Python stdout:', stdout);
-        console.log('Python stderr:', stderr);
-        
-        // Process the output
-        if (stdout) {
-          try {
-            const result = JSON.parse(stdout);
-            console.log('Parsed result:', result);
-            if (result.success) {
-              console.log('Successfully fetched transcript with Python');
-              return result.transcript;
-            } else {
-              throw new Error(result.error || 'Failed to fetch transcript');
-            }
-          } catch (parseError) {
-            console.error('JSON parsing error:', parseError);
-            console.log('Raw stdout:', stdout);
-            throw new Error('Failed to parse transcript data');
-          }
+      try {
+        const result = JSON.parse(stdout);
+        if (result.success) {
+          console.log('Successfully fetched transcript with Python');
+          return result.transcript;
+        } else {
+          console.error('Python script error:', result.error, result.details);
+          throw new Error(result.error);
         }
-      } else {
-        console.log('Python script not found at expected paths');
-        throw new Error('Python script not found');
+      } catch (parseError) {
+        console.error('Error parsing Python script output:', parseError);
+        console.log('Raw stdout:', stdout.substring(0, 500) + '...');
+        throw new Error('Failed to parse Python script output');
       }
     } catch (pythonError) {
-      console.error('Error with Python execution:', pythonError instanceof Error ? pythonError.message : String(pythonError));
-      console.log('Falling back to JavaScript methods');
+      console.error('Error executing Python script:', pythonError);
+      console.log('Falling back to JavaScript implementation');
+      return await fetchTranscriptWithJS(videoId);
     }
-    
-    // Method 3: JavaScript fallback using web scraping
-    try {
-      console.log('Using JavaScript fallback to fetch transcript');
-      const transcript = await fetchTranscriptWithJS(videoId);
-      if (transcript) {
-        console.log('Successfully fetched transcript with JavaScript fallback');
-        return transcript;
-      }
-    } catch (jsError) {
-      console.error('JavaScript fallback error:', jsError);
-      // Continue to YouTube API method
-    }
-    
-    // Method 4: Try using YouTube Data API if available
-    try {
-      const apiKey = process.env.YOUTUBE_API_KEY;
-      if (apiKey) {
-        console.log('Attempting to fetch captions using YouTube Data API');
-        
-        // First get the caption track list
-        const captionListUrl = `https://www.googleapis.com/youtube/v3/captions?part=snippet&videoId=${videoId}&key=${apiKey}`;
-        const captionListResponse = await fetch(captionListUrl);
-        const captionList = await captionListResponse.json();
-        
-        console.log('Caption list response:', JSON.stringify(captionList).substring(0, 500) + '...');
-        
-        if (captionList.items && captionList.items.length > 0) {
-          // Find English captions or use the first available
-          const englishCaption = captionList.items.find((item: any) => 
-            item.snippet.language === 'en' || item.snippet.language === 'en-US'
-          ) || captionList.items[0];
-          
-          if (englishCaption) {
-            const captionId = englishCaption.id;
-            console.log(`Found caption track: ${captionId}`);
-            
-            // Get the actual caption content
-            const captionUrl = `https://www.googleapis.com/youtube/v3/captions/${captionId}?key=${apiKey}`;
-            const captionResponse = await fetch(captionUrl);
-            const captionData = await captionResponse.json();
-            
-            if (captionData && captionData.text) {
-              console.log('Successfully fetched transcript with YouTube API');
-              return captionData.text;
-            }
-          }
-        }
-      } else {
-        console.log('YouTube API key not available, skipping API method');
-      }
-    } catch (apiError) {
-      console.error('YouTube API error:', apiError);
-    }
-    
-    // If all methods failed, throw an error
-    throw new Error('All transcript fetching methods failed');
-  } catch (error) {
-    console.error('Detailed error in getTranscript:', {
-      error: error instanceof Error ? error.message : 'Unknown error',
-      stack: error instanceof Error ? error.stack : undefined,
-      code: error instanceof Error && 'code' in error ? (error as any).code : undefined,
-      stdout: error instanceof Error && 'stdout' in error ? (error as any).stdout : undefined,
-      stderr: error instanceof Error && 'stderr' in error ? (error as any).stderr : undefined
-    });
-    
-    throw new Error('Failed to fetch transcript: ' + (error instanceof Error ? error.message : 'Unknown error'));
+  } catch (error: unknown) {
+    console.error('Error in getTranscript:', error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    throw new Error(`Failed to get transcript: ${errorMessage}`);
   }
 }
 
