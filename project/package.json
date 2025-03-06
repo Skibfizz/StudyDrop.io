@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "postinstall": "pip install -r project/scripts/requirements.txt || pip3 install -r project/scripts/requirements.txt || echo 'Python dependencies installation failed, but continuing build'"
+    "postinstall": "pip install -r scripts/requirements.txt || pip3 install -r scripts/requirements.txt || echo 'Python dependencies installation failed, but continuing build'"
   },
   "dependencies": {
     "@auth/core": "^0.34.2",
@@ -49,7 +49,9 @@
     "@types/node": "^20.6.2",
     "@types/react": "^18.2.22",
     "@types/react-dom": "^18.2.7",
+    "@types/xml2js": "^0.4.14",
     "autoprefixer": "^10.4.15",
+    "axios": "^1.8.1",
     "cheerio": "^1.0.0",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
@@ -85,6 +87,7 @@
     "tailwindcss-animate": "^1.0.7",
     "typescript": "^5.2.2",
     "vaul": "^0.9.9",
+    "xml2js": "^0.6.2",
     "youtube-transcript-api": "^1.1.2",
     "zod": "^3.23.8"
   }

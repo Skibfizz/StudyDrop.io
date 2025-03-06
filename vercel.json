@@ -1,5 +1,5 @@
 {
-  "buildCommand": "pip install -r project/scripts/requirements.txt || pip3 install -r project/scripts/requirements.txt || echo 'Python dependencies installation failed, but continuing build' && npm run build",
+  "buildCommand": "cd project && pip install -r scripts/requirements.txt || pip3 install -r scripts/requirements.txt || echo 'Python dependencies installation failed, but continuing build' && npm run build",
   "outputDirectory": "project/.next",
   "installCommand": "npm install",
   "framework": "nextjs",

@@ -3,19 +3,24 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
-    "next": "14.1.0",
     "@supabase/ssr": "^0.5.2",
     "eslint": "^8.57.0",
     "glob": "^10.3.10",
+    "lru-cache": "^10.2.0",
+    "next": "14.1.0",
     "rimraf": "^5.0.5",
-    "lru-cache": "^10.2.0"
+    "xml2js": "^0.6.2"
   },
   "scripts": {
+    "postinstall": "cd project && npm install",
     "build": "cd project && npm install && npm run build",
     "start": "cd project && npm start",
     "dev": "cd project && npm run dev"
   },
   "engines": {
     "node": ">=18.x"
+  },
+  "devDependencies": {
+    "@types/xml2js": "^0.4.14"
   }
-} 
+}
