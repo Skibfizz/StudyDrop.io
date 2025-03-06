@@ -101,16 +101,96 @@ ${transcript}`
   }
 }
 
+// JavaScript fallback for fetching YouTube transcripts
+async function fetchTranscriptWithJS(videoId: string) {
+  console.log('Using JavaScript fallback to fetch transcript for video:', videoId);
+  try {
+    // First, try to get transcript using the YouTube API
+    const response = await fetch(`https://www.youtube.com/watch?v=${videoId}`);
+    const html = await response.text();
+    
+    // Look for the transcript data in the page
+    const captionTrackPattern = /"captionTracks":\[.*?"baseUrl":"(.*?)"/;
+    const match = html.match(captionTrackPattern);
+    
+    if (!match || !match[1]) {
+      console.log('No caption tracks found in YouTube page');
+      throw new Error('No captions available for this video');
+    }
+    
+    // The URL is escaped in the JSON
+    const captionUrl = match[1].replace(/\\u0026/g, '&');
+    console.log('Found caption URL:', captionUrl);
+    
+    // Fetch the actual transcript
+    const transcriptResponse = await fetch(captionUrl);
+    const transcriptXml = await transcriptResponse.text();
+    
+    // Parse the XML to extract text
+    const textSegments = transcriptXml.match(/<text.*?>(.*?)<\/text>/g) || [];
+    const transcript = textSegments
+      .map(segment => {
+        // Extract the text content and decode HTML entities
+        const text = segment.replace(/<.*?>(.*?)<\/.*?>/, '$1')
+          .replace(/&amp;/g, '&')
+          .replace(/&lt;/g, '<')
+          .replace(/&gt;/g, '>')
+          .replace(/&quot;/g, '"')
+          .replace(/&#39;/g, "'");
+        return text;
+      })
+      .join(' ');
+    
+    console.log('Successfully fetched transcript with JS fallback');
+    return transcript;
+  } catch (error) {
+    console.error('Error in JS transcript fallback:', error);
+    throw new Error('Failed to fetch transcript with JavaScript fallback');
+  }
+}
+
 async function getTranscript(videoId: string) {
   try {
     // Get the absolute path to the script and log relevant paths
     const scriptPath = path.join(process.cwd(), 'scripts', 'get_transcript.py');
-    console.log('Debug Info:', {
+    
+    // Enhanced debugging information
+    console.log('Environment Debug Info:', {
       currentWorkingDir: process.cwd(),
       scriptPath,
       scriptExists: require('fs').existsSync(scriptPath),
-      pythonPath: process.env.PATH
+      nodeVersion: process.version,
+      platform: process.platform,
+      env: {
+        PATH: process.env.PATH,
+        PYTHONPATH: process.env.PYTHONPATH,
+        VERCEL_REGION: process.env.VERCEL_REGION,
+        VERCEL_ENV: process.env.VERCEL_ENV
+      },
+      directories: {
+        cwd: require('fs').readdirSync(process.cwd()),
+        scripts: require('fs').existsSync(path.join(process.cwd(), 'scripts')) 
+          ? require('fs').readdirSync(path.join(process.cwd(), 'scripts')) 
+          : 'Directory not found'
+      }
     });
+    
+    // Try to check if Python is available
+    let pythonAvailable = false;
+    try {
+      const { stdout: pythonVersionOutput } = await execAsync('python --version');
+      console.log('Python version check:', pythonVersionOutput);
+      pythonAvailable = true;
+    } catch (error) {
+      const pythonError = error as Error;
+      console.log('Python check error:', pythonError.message);
+    }
+    
+    // If Python is not available, use JavaScript fallback
+    if (!pythonAvailable) {
+      console.log('Python not available, using JavaScript fallback');
+      return await fetchTranscriptWithJS(videoId);
+    }
     
     // Run the Python script with absolute path and capture all output
     console.log('Executing command:', `python "${scriptPath}" ${videoId}`);
@@ -140,9 +220,20 @@ async function getTranscript(videoId: string) {
   } catch (error) {
     console.error('Detailed error in getTranscript:', {
       error: error instanceof Error ? error.message : 'Unknown error',
-      stack: error instanceof Error ? error.stack : undefined
+      stack: error instanceof Error ? error.stack : undefined,
+      code: error instanceof Error && 'code' in error ? (error as any).code : undefined,
+      stdout: error instanceof Error && 'stdout' in error ? (error as any).stdout : undefined,
+      stderr: error instanceof Error && 'stderr' in error ? (error as any).stderr : undefined
     });
-    throw error;
+    
+    // As a last resort, try the JavaScript fallback
+    try {
+      console.log('Trying JavaScript fallback after Python failure');
+      return await fetchTranscriptWithJS(videoId);
+    } catch (fallbackError) {
+      console.error('JavaScript fallback also failed:', fallbackError);
+      throw error; // Throw the original error
+    }
   }
 }
 

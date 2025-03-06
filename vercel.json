@@ -1,6 +1,12 @@
 {
   "buildCommand": "npm run build",
   "outputDirectory": "project/.next",
-  "installCommand": "npm install",
-  "framework": "nextjs"
+  "installCommand": "npm install && pip install youtube-transcript-api",
+  "framework": "nextjs",
+  "functions": {
+    "project/app/api/youtube/**": {
+      "runtime": "nodejs18.x",
+      "memory": 1024
+    }
+  }
 } 
