@@ -74,7 +74,7 @@ const LogoColumn: React.FC<LogoColumnProps> = React.memo(
 
     return (
       <motion.div
-        className="relative h-[80px] w-[160px] overflow-hidden md:h-[80px] md:w-[160px]"
+        className="relative h-[50px] w-[100px] xs:h-[55px] xs:w-[110px] sm:h-[60px] sm:w-[120px] md:h-[70px] md:w-[140px] lg:h-[80px] lg:w-[160px] overflow-hidden"
         initial={{ opacity: 0, y: 50 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{
@@ -153,7 +153,7 @@ export function LogoCarousel({ columnCount = 2, logos }: LogoCarouselProps) {
   }, [logos, columnCount])
 
   return (
-    <div className="flex items-center justify-center gap-8">
+    <div className="flex items-center justify-center gap-2 sm:gap-4 md:gap-6 lg:gap-8">
       {logoSets.map((logos, index) => (
         <LogoColumn
           key={index}

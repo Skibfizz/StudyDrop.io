@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Home, Star, DollarSign } from "lucide-react"
+import { Layers, Star, DollarSign } from "lucide-react"
 import { NavBar } from "@/components/ui/tubelight-navbar"
 import { useRouter } from "next/navigation"
 import { ThemeToggle } from "@/components/theme-toggle"
@@ -12,15 +12,46 @@ export function HomepageNavbar() {
   const router = useRouter()
   
   const scrollToSection = (sectionId: string) => {
+    console.log(`Attempting to scroll to section: ${sectionId}`);
     const section = document.getElementById(sectionId)
+    
     if (section) {
-      section.scrollIntoView({ behavior: "smooth" })
+      console.log(`Section found:`, {
+        sectionId,
+        offsetTop: section.offsetTop,
+        offsetHeight: section.offsetHeight,
+        navbarHeight: document.querySelector('header')?.offsetHeight || 0,
+        windowHeight: window.innerHeight,
+        scrollY: window.scrollY
+      });
+      
+      // Get the navbar height to calculate offset
+      const navbarHeight = document.querySelector('header')?.offsetHeight || 0;
+      console.log(`Navbar height: ${navbarHeight}px`);
+      
+      // Use a custom scroll implementation with offset
+      const yOffset = -100; // Additional offset for better spacing
+      const y = section.getBoundingClientRect().top + window.pageYOffset + yOffset;
+      
+      console.log(`Scrolling to position:`, {
+        sectionTop: section.getBoundingClientRect().top,
+        pageYOffset: window.pageYOffset,
+        yOffset,
+        finalY: y
+      });
+      
+      window.scrollTo({
+        top: y,
+        behavior: 'smooth'
+      });
+    } else {
+      console.error(`Section with ID "${sectionId}" not found`);
     }
   }
 
   const navItems = [
     { name: "Reviews", url: "#", icon: Star },
-    { name: "Features", url: "#", icon: Home },
+    { name: "Features", url: "#", icon: Layers },
     { name: "Pricing", url: "/pricing", icon: DollarSign }
   ]
 

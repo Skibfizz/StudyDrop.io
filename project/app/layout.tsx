@@ -7,7 +7,7 @@ import { SupabaseProvider } from '@/context/supabase-context';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata = {
-  title: 'StudyMind - AI-Powered Learning Platform',
+  title: 'StudyDrop - AI-Powered Learning Platform',
   description: 'Transform your study experience with AI-powered learning tools and personalized assistance.',
 };
 

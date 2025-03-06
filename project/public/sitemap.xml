@@ -2,31 +2,31 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <!-- Main Pages -->
   <url>
-    <loc>https://studymind.ai/</loc>
+    <loc>https://studydrop.ai/</loc>
     <lastmod>2024-03-20</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>https://studymind.ai/pricing</loc>
+    <loc>https://studydrop.ai/pricing</loc>
     <lastmod>2024-03-20</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://studymind.ai/features</loc>
+    <loc>https://studydrop.ai/features</loc>
     <lastmod>2024-03-20</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://studymind.ai/about</loc>
+    <loc>https://studydrop.ai/about</loc>
     <lastmod>2024-03-20</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://studymind.ai/contact</loc>
+    <loc>https://studydrop.ai/contact</loc>
     <lastmod>2024-03-20</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
@@ -34,13 +34,13 @@
   
   <!-- Auth Pages -->
   <url>
-    <loc>https://studymind.ai/auth/signin</loc>
+    <loc>https://studydrop.ai/auth/signin</loc>
     <lastmod>2024-03-20</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://studymind.ai/auth/signup</loc>
+    <loc>https://studydrop.ai/auth/signup</loc>
     <lastmod>2024-03-20</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -48,13 +48,13 @@
   
   <!-- Legal Pages -->
   <url>
-    <loc>https://studymind.ai/privacy</loc>
+    <loc>https://studydrop.ai/privacy</loc>
     <lastmod>2024-03-20</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
   </url>
   <url>
-    <loc>https://studymind.ai/terms</loc>
+    <loc>https://studydrop.ai/terms</loc>
     <lastmod>2024-03-20</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
@@ -62,7 +62,7 @@
   
   <!-- Blog Pages -->
   <url>
-    <loc>https://studymind.ai/blog</loc>
+    <loc>https://studydrop.ai/blog</loc>
     <lastmod>2024-03-20</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
@@ -70,13 +70,13 @@
   
   <!-- Help & Support -->
   <url>
-    <loc>https://studymind.ai/help</loc>
+    <loc>https://studydrop.ai/help</loc>
     <lastmod>2024-03-20</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://studymind.ai/faq</loc>
+    <loc>https://studydrop.ai/faq</loc>
     <lastmod>2024-03-20</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>

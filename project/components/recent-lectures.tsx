@@ -7,6 +7,7 @@ import { useSupabase } from "@/context/supabase-context";
 import { getRecentLectures, getLectureById } from "@/lib/video-helpers";
 import { format } from "date-fns";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 interface RecentLecturesProps {
   onLectureSelect: (lectureData: {
@@ -19,12 +20,14 @@ interface RecentLecturesProps {
   }) => void;
   limit?: number;
   className?: string;
+  hideTitle?: boolean;
 }
 
 export function RecentLectures({ 
   onLectureSelect, 
   limit = 3, 
-  className = "" 
+  className = "",
+  hideTitle = false
 }: RecentLecturesProps) {
   const [recentLectures, setRecentLectures] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -102,9 +105,21 @@ export function RecentLectures({
       const isDbLecture = lecture.video_id !== undefined;
       const videoId = isDbLecture ? lecture.video_id : lecture.videoId;
       
+      console.log('Lecture clicked - DETAILED DEBUG:', {
+        lectureId: lecture.id,
+        videoId,
+        isDbLecture,
+        title: getLectureTitle(lecture),
+        fullLecture: lecture,
+        router: !!router
+      });
+      
       // For database lectures, fetch the full lecture data
       if (isDbLecture) {
+        console.log('Fetching full lecture data from database for lecture ID:', lecture.id);
         const fullLecture = await getLectureById(lecture.id);
+        
+        console.log('Full lecture data received:', fullLecture);
         
         if (fullLecture && fullLecture.content) {
           const lectureData = {
@@ -116,12 +131,40 @@ export function RecentLectures({
             transcript: fullLecture.content.transcript
           };
           
-          // Navigate directly to the chat page
-          router.push(`/chat?tab=youtube&videoId=${lectureData.videoId}`);
+          console.log('Navigating to chat page with lecture data:', {
+            id: lectureData.id,
+            videoId: lectureData.videoId,
+            title: lectureData.title,
+            summaryLength: lectureData.summary?.length,
+            transcriptLength: lectureData.transcript?.length
+          });
           
-          // Still call onLectureSelect to update any parent component state if needed
-          onLectureSelect(lectureData);
+          // Try to call onLectureSelect first
+          try {
+            console.log('Calling onLectureSelect with lecture data');
+            onLectureSelect(lectureData);
+            console.log('onLectureSelect called successfully');
+          } catch (error) {
+            console.error('Error calling onLectureSelect:', error);
+          }
+          
+          // Then try to navigate
+          try {
+            console.log('Attempting to navigate to:', `/chat?tab=youtube&videoId=${lectureData.videoId}`);
+            router.push(`/chat?tab=youtube&videoId=${lectureData.videoId}`);
+            console.log('Navigation initiated');
+          } catch (error) {
+            console.error('Error during navigation:', error);
+            
+            // Fallback: Use window.location as a last resort
+            console.log('Falling back to window.location navigation');
+            window.location.href = `/chat?tab=youtube&videoId=${lectureData.videoId}`;
+          }
         } else {
+          console.error('Failed to load lecture details:', {
+            lectureId: lecture.id,
+            fullLecture
+          });
           toast({
             title: "Error",
             description: "Failed to load lecture details. The lecture data may be incomplete.",
@@ -139,11 +182,35 @@ export function RecentLectures({
           transcript: lecture.transcript
         };
         
-        // Navigate directly to the chat page
-        router.push(`/chat?tab=youtube&videoId=${lectureData.videoId}`);
+        console.log('Navigating to chat page with localStorage lecture data:', {
+          id: lectureData.id,
+          videoId: lectureData.videoId,
+          title: lectureData.title,
+          summaryLength: lectureData.summary?.length,
+          transcriptLength: lectureData.transcript?.length
+        });
         
-        // Still call onLectureSelect to update any parent component state if needed
-        onLectureSelect(lectureData);
+        // Try to call onLectureSelect first
+        try {
+          console.log('Calling onLectureSelect with localStorage lecture data');
+          onLectureSelect(lectureData);
+          console.log('onLectureSelect called successfully');
+        } catch (error) {
+          console.error('Error calling onLectureSelect:', error);
+        }
+        
+        // Then try to navigate
+        try {
+          console.log('Attempting to navigate to:', `/chat?tab=youtube&videoId=${lectureData.videoId}`);
+          router.push(`/chat?tab=youtube&videoId=${lectureData.videoId}`);
+          console.log('Navigation initiated');
+        } catch (error) {
+          console.error('Error during navigation:', error);
+          
+          // Fallback: Use window.location as a last resort
+          console.log('Falling back to window.location navigation');
+          window.location.href = `/chat?tab=youtube&videoId=${lectureData.videoId}`;
+        }
       }
     } catch (error) {
       console.error('Error loading lecture:', error);
@@ -185,9 +252,15 @@ export function RecentLectures({
     }
   };
 
+  // Clean title by removing quotation marks
+  const cleanTitle = (title: string) => {
+    return title.replace(/["']/g, '');
+  };
+
   // Get lecture title based on whether it's from database or localStorage
   const getLectureTitle = (lecture: any) => {
-    return lecture.title || (lecture.video_id ? `YouTube Video (${lecture.video_id})` : `YouTube Video (${lecture.videoId})`);
+    const rawTitle = lecture.title || (lecture.video_id ? `YouTube Video (${lecture.video_id})` : `YouTube Video (${lecture.videoId})`);
+    return cleanTitle(rawTitle);
   };
   
   // Get lecture date based on whether it's from database or localStorage
@@ -204,53 +277,90 @@ export function RecentLectures({
     }
   };
 
+  // If there are no lectures and we're not loading, don't render anything
+  if (!isLoading && recentLectures.length === 0) {
+    console.log('DEBUG: No lectures to display, returning null');
+    return null;
+  }
+
   return (
-    <Card className={`p-6 bg-white/80 backdrop-blur-sm border-purple-500/10 ${className}`}>
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-sm font-medium text-gray-600">Recent Lectures</h3>
-      </div>
+    <Card className={`p-4 sm:p-6 bg-white/80 backdrop-blur-sm border-purple-500/10 ${className}`}>
+      {!hideTitle && (
+        <div className="flex items-center justify-between mb-2 sm:mb-4">
+          <h3 className="text-sm font-medium text-gray-600">Recent Lectures</h3>
+        </div>
+      )}
       
       {isLoading ? (
-        <div className="flex justify-center items-center py-8">
-          <Loader2 className="h-6 w-6 animate-spin text-purple-500" />
+        <div className="flex justify-center items-center py-4 sm:py-8">
+          <Loader2 className="h-5 w-5 sm:h-6 sm:w-6 animate-spin text-purple-500" />
         </div>
       ) : recentLectures.length === 0 ? (
-        <div className="text-center py-8 text-gray-500">
+        <div className="text-center py-4 sm:py-8 text-gray-500 text-sm sm:text-base">
           No recent lectures found
         </div>
       ) : (
-        <div className="space-y-3">
-          {recentLectures.map((lecture) => (
-            <Button
-              key={lecture.id}
-              variant="ghost"
-              className="w-full p-2 h-auto flex items-start justify-between hover:bg-purple-500/5 transition-all group"
-              onClick={() => handleLectureClick(lecture)}
-            >
-              <div className="flex items-start space-x-3">
-                <div className="relative w-24 h-16 rounded-lg overflow-hidden flex-shrink-0 bg-purple-500/5">
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <Youtube className="h-6 w-6 text-purple-500" />
-                  </div>
-                </div>
-                <div className="flex-1 text-left">
-                  <p className="font-medium text-gray-900 text-sm line-clamp-2 group-hover:text-purple-600 transition-colors">
-                    {getLectureTitle(lecture)}
-                  </p>
-                  <div className="flex items-center space-x-2 mt-1">
-                    <span className="text-xs text-gray-500">
-                      {formatDate(getLectureDate(lecture))}
-                    </span>
-                    <span className="text-xs text-gray-400">•</span>
-                    <span className="text-xs text-gray-500">
-                      {formatDuration(getLectureDuration(lecture))}
-                    </span>
-                  </div>
-                </div>
+        <div className="space-y-2 sm:space-y-3">
+          {recentLectures.map((lecture) => {
+            // Determine the videoId for the lecture
+            const videoId = lecture.video_id || lecture.videoId;
+            const chatUrl = `/chat?tab=youtube&videoId=${videoId}`;
+            
+            return (
+              <div key={lecture.id} className="relative">
+                {/* Invisible anchor tag that covers the entire button area */}
+                <a 
+                  href={chatUrl}
+                  className="absolute inset-0 z-10 opacity-0"
+                  aria-hidden="true"
+                  tabIndex={-1}
+                >
+                  {getLectureTitle(lecture)}
+                </a>
+                
+                <Link 
+                  href={chatUrl}
+                  passHref
+                  legacyBehavior
+                >
+                  <Button
+                    variant="ghost"
+                    className="w-full p-2 h-auto flex items-start justify-between hover:bg-purple-500/5 transition-all group"
+                    onClick={(e) => {
+                      e.preventDefault(); // Prevent default button behavior
+                      e.stopPropagation(); // Stop event propagation
+                      console.log('Button clicked for lecture:', lecture.id);
+                      handleLectureClick(lecture);
+                    }}
+                    type="button" // Explicitly set type to button
+                  >
+                    <div className="flex items-start space-x-2 sm:space-x-3">
+                      <div className="relative w-16 h-12 sm:w-24 sm:h-16 rounded-lg overflow-hidden flex-shrink-0 bg-purple-500/5">
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <Youtube className="h-4 w-4 sm:h-6 sm:w-6 text-purple-500" />
+                        </div>
+                      </div>
+                      <div className="flex-1 text-left">
+                        <p className="font-medium text-gray-900 text-xs sm:text-sm line-clamp-2 group-hover:text-purple-600 transition-colors">
+                          {getLectureTitle(lecture)}
+                        </p>
+                        <div className="flex items-center space-x-2 mt-1">
+                          <span className="text-xs text-gray-500">
+                            {formatDate(getLectureDate(lecture))}
+                          </span>
+                          <span className="text-xs text-gray-400">•</span>
+                          <span className="text-xs text-gray-500">
+                            {formatDuration(getLectureDuration(lecture))}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    <ChevronRight className="h-3 w-3 sm:h-4 sm:w-4 text-gray-400 group-hover:text-purple-500 transition-colors mt-2" />
+                  </Button>
+                </Link>
               </div>
-              <ChevronRight className="h-4 w-4 text-gray-400 group-hover:text-purple-500 transition-colors mt-2" />
-            </Button>
-          ))}
+            );
+          })}
         </div>
       )}
     </Card>

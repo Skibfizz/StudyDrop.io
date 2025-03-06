@@ -81,14 +81,6 @@ A concise 2-3 sentence overview of the main topic and key takeaways.
   * Supporting details
   * Examples
 
-## Potential Quiz Questions
-1. Question 1?
-   * Answer with explanation
-2. Question 2?
-   * Answer with explanation
-3. Question 3?
-   * Answer with explanation
-
 Use **bold** for emphasis on key terms.
 Use *italics* for important concepts.
 Use > blockquotes for memorable quotes or key takeaways.`
@@ -321,11 +313,12 @@ async function incrementUsage(userId: string) {
 // Function to get video details from YouTube
 async function getVideoDetails(videoId: string) {
   try {
+    console.log(`[DEBUG] Getting video details for videoId: ${videoId}`);
     // Use YouTube Data API to get video details
     const apiKey = process.env.YOUTUBE_API_KEY;
     
     if (!apiKey) {
-      console.warn('YouTube API key not found, using fallback method');
+      console.warn('[DEBUG] YouTube API key not found, using fallback method');
       return { title: `YouTube Video (${videoId})`, duration: 'PT00M00S' };
     }
     
@@ -334,9 +327,10 @@ async function getVideoDetails(videoId: string) {
     );
     
     const data = await response.json();
+    console.log(`[DEBUG] YouTube API response for ${videoId}:`, JSON.stringify(data, null, 2).substring(0, 500) + '...');
     
     if (!data.items || data.items.length === 0) {
-      console.warn('No video details found from YouTube API');
+      console.warn('[DEBUG] No video details found from YouTube API');
       return { title: `YouTube Video (${videoId})`, duration: 'PT00M00S' };
     }
     
@@ -344,16 +338,54 @@ async function getVideoDetails(videoId: string) {
     const title = videoDetails.snippet?.title || `YouTube Video (${videoId})`;
     const duration = videoDetails.contentDetails?.duration || 'PT00M00S';
     
+    console.log(`[DEBUG] Retrieved video title: "${title}" and duration: ${duration}`);
     return { title, duration };
   } catch (error) {
-    console.error('Error fetching video details:', error);
+    console.error('[DEBUG] Error fetching video details:', error);
     return { title: `YouTube Video (${videoId})`, duration: 'PT00M00S' };
+  }
+}
+
+// Function to generate a descriptive title for the lecture using OpenAI
+async function generateDescriptiveTitle(transcript: string, originalTitle: string) {
+  try {
+    console.log(`[DEBUG] Generating descriptive title for video with original title: "${originalTitle}"`);
+    
+    // Truncate transcript to first 1000 characters for title generation
+    const truncatedTranscript = transcript.substring(0, 1000);
+    
+    const completion = await openai.chat.completions.create({
+      model: "gpt-3.5-turbo",
+      temperature: 0.3,
+      messages: [
+        {
+          role: "system",
+          content: "You are an expert at creating concise, descriptive titles for educational content. Create a short, informative title (maximum 60 characters) that accurately describes the content of the lecture based on the transcript excerpt and original title provided. Do not include quotation marks in your response."
+        },
+        {
+          role: "user",
+          content: `Original YouTube title: "${originalTitle}"\n\nTranscript excerpt:\n${truncatedTranscript}\n\nPlease generate a concise, descriptive title for this educational lecture (maximum 60 characters). Do not include quotation marks in your response.`
+        }
+      ]
+    });
+
+    let generatedTitle = completion.choices[0]?.message?.content?.trim() || originalTitle;
+    
+    // Remove any quotation marks from the title
+    generatedTitle = generatedTitle.replace(/["']/g, '');
+    
+    console.log(`[DEBUG] Generated descriptive title: "${generatedTitle}"`);
+    
+    return generatedTitle;
+  } catch (error) {
+    console.error('[DEBUG] Error generating descriptive title:', error);
+    return originalTitle; // Fallback to original title if generation fails
   }
 }
 
 export async function POST(req: Request) {
   try {
-    const { url } = await req.json();
+    const { url, excludeQuizQuestions } = await req.json();
 
     if (!url) {
       return new Response(JSON.stringify({ error: 'YouTube URL is required' }), {
@@ -370,9 +402,56 @@ export async function POST(req: Request) {
       });
     }
 
+    console.log(`Processing YouTube video with ID: ${videoId}`);
+
     // Get the current user
     const supabase = await createSupabaseServerClient();
     const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+      console.log('No authenticated user found for this request');
+    } else {
+      console.log(`Request from authenticated user: ${user.id}`);
+    }
+
+    // Check if this video already exists in the database for this user
+    if (user) {
+      console.log(`Checking if video ${videoId} already exists for user ${user.id}`);
+      const { data: existingVideo, error } = await supabase
+        .from('content')
+        .select('id, title, content')
+        .eq('user_id', user.id)
+        .eq('type', 'video')
+        .eq('content->>videoId', videoId)
+        .single();
+      
+      if (!error && existingVideo) {
+        console.log(`Video ${videoId} already exists, returning existing data`);
+        let summary = existingVideo.content.summary;
+        
+        // If excludeQuizQuestions is true, remove the quiz questions section from existing summary
+        if (excludeQuizQuestions && summary) {
+          const quizSectionIndex = summary.indexOf('## Potential Quiz Questions');
+          if (quizSectionIndex !== -1) {
+            summary = summary.substring(0, quizSectionIndex).trim();
+          }
+        }
+        
+        return new Response(JSON.stringify({ 
+          success: true,
+          videoId,
+          title: existingVideo.title,
+          duration: existingVideo.content.duration || 'PT00M00S',
+          summary: summary,
+          transcript: existingVideo.content.transcript
+        }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      } else {
+        console.log(`Video ${videoId} does not exist for user ${user.id}, will process and save`);
+      }
+    }
 
     // Check usage limits before processing
     if (user) {
@@ -389,14 +468,19 @@ export async function POST(req: Request) {
       }
     }
 
+    console.log(`Fetching transcript for video ${videoId}`);
     // Get transcript
     const transcriptData = await getTranscript(videoId);
     
+    console.log(`Processing transcript with AI for video ${videoId}`);
     // Process with AI
     const analysis = await processTranscriptWithAI(transcriptData);
     
     // Get video details (title and duration)
-    const { title, duration } = await getVideoDetails(videoId);
+    const { title: originalTitle, duration } = await getVideoDetails(videoId);
+    
+    // Generate a more descriptive title
+    const descriptiveTitle = await generateDescriptiveTitle(transcriptData, originalTitle);
 
     // Only increment usage after successful API response
     if (user) {
@@ -404,13 +488,15 @@ export async function POST(req: Request) {
       
       // Save the video summary to the database
       try {
-        await saveVideoSummary(user.id, {
+        console.log(`Saving video summary to database for user ${user.id}, video ${videoId}`);
+        const savedData = await saveVideoSummary(user.id, {
           videoId,
-          title,
+          title: descriptiveTitle, // Use the descriptive title
           duration,
           summary: analysis,
           transcript: transcriptData
         });
+        console.log(`Successfully saved video with ID: ${savedData?.id}`);
       } catch (saveError) {
         console.error('Error saving video summary:', saveError);
         // Continue even if saving fails
@@ -420,7 +506,7 @@ export async function POST(req: Request) {
     return new Response(JSON.stringify({ 
       success: true,
       videoId,
-      title,
+      title: descriptiveTitle, // Return the descriptive title
       duration,
       summary: analysis,
       transcript: transcriptData

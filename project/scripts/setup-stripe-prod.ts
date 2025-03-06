@@ -72,7 +72,7 @@ async function setupStripeProd() {
     console.log('\n4️⃣ Configuring customer portal...');
     await stripe.billingPortal.configurations.create({
       business_profile: {
-        headline: 'StudyMind Subscription Management',
+        headline: 'StudyDrop Subscription Management',
       },
       features: {
         subscription_cancel: {

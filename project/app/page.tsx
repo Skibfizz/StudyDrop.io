@@ -91,25 +91,25 @@ export default function Home() {
 
   const reviews = [
     {
-      text: "StudyMind transformed how I prepare for exams. The AI tutor feels like having a personal teacher available 24/7.",
+      text: "The Video Learning feature has transformed how I study from YouTube lectures. Being able to automatically get summaries and notes saves me so much time.",
       author: "Sarah K.",
       role: "Medical Student",
       rating: 5
     },
     {
-      text: "The smart note processing feature saves me hours of organizing study materials. Absolutely game-changing!",
+      text: "The Text Humanizer tool is incredible! It makes my academic writing more engaging and easier to understand. My professors have noticed the improvement.",
       author: "James L.",
       role: "Computer Science Major",
       rating: 5
     },
     {
-      text: "I love how it breaks down complex topics into easy-to-understand concepts. My grades have improved significantly.",
+      text: "I love how the Flashcards feature turns my notes into interactive study materials. It's helped me memorize complex concepts much faster.",
       author: "Emily R.",
       role: "High School Senior",
       rating: 5
     },
     {
-      text: "The collaborative features helped our study group stay connected and productive, even when studying remotely.",
+      text: "The YouTube lecture processing is a game-changer. I can upload any educational video and get AI-powered summaries and practice questions instantly.",
       author: "Michael T.",
       role: "MBA Student",
       rating: 5
@@ -147,9 +147,9 @@ export default function Home() {
       <div className="absolute inset-0 theme-dot-pattern z-0" />
       <HomepageNavbar />
       
-      <main className="flex-1 pt-20 md:pt-0 relative z-10">
+      <main className="flex-1 pt-16 md:pt-0 relative z-10">
         {/* Hero Section */}
-        <section className="relative flex items-center justify-center px-6 pt-80 pb-80">
+        <section className="relative flex items-center justify-center px-6 pt-60 pb-40">
           <AnimatedGridPattern
             numSquares={50}
             maxOpacity={0.1}
@@ -194,9 +194,9 @@ export default function Home() {
         </section>
 
         {/* Reviews Section */}
-        <section id="reviews-section" className="relative px-0 py-64 overflow-hidden">
+        <section id="reviews-section" className="relative px-0 py-32 overflow-hidden scroll-mt-32">
           <div className="relative mx-auto w-full">
-            <div className="text-center mb-32">
+            <div className="text-center mb-16">
               <h2 className="text-3xl font-bold sm:text-4xl mb-10 text-gray-900">What Our Users Say</h2>
               <div className="w-20 h-1 bg-gradient-to-r from-purple-500 to-blue-500 mx-auto rounded-full" />
             </div>
@@ -238,7 +238,7 @@ export default function Home() {
         </section>
 
         {/* Features Section */}
-        <section id="features-section" className="relative px-6 py-32">
+        <section id="features-section" className="relative px-6 py-32 scroll-mt-32">
           <div className="relative mx-auto max-w-[1200px] space-y-16">
             <div className="text-center space-y-4">
               <h2 className="text-3xl font-bold sm:text-4xl text-gray-900">Features that set us apart</h2>
@@ -316,7 +316,7 @@ export default function Home() {
           <div className="relative mx-auto max-w-[920px] text-center space-y-8">
             <h2 className="text-3xl font-bold sm:text-4xl text-gray-900">Ready to transform your study experience?</h2>
             <p className="text-gray-600 max-w-[600px] mx-auto">
-              Join thousands of students who are already using StudyMind to enhance their learning journey.
+              Join thousands of students who are already using StudyDrop to enhance their learning journey.
             </p>
             <div className="mt-8">
               <Button 

@@ -1,6 +1,6 @@
 {
-  "name": "StudyMind",
-  "short_name": "StudyMind",
+  "name": "StudyDrop",
+  "short_name": "StudyDrop",
   "description": "AI-Powered Learning Platform",
   "start_url": "/",
   "display": "standalone",

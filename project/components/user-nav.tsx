@@ -48,7 +48,7 @@ export function UserNav() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="relative h-8 w-8 rounded-full p-0 mt-2">
+        <Button variant="ghost" className="relative h-8 w-8 rounded-full p-0">
           <VerifiedAvatar 
             name={displayName} 
             size="sm"

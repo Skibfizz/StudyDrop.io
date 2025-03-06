@@ -9,7 +9,7 @@ import { signOut } from "next-auth/react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { SharedHeader } from "@/components/shared-header";
 import { useSubscription } from "@/lib/hooks/use-subscription";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useToast } from "@/components/ui/use-toast";
 import {
   Dialog,
@@ -25,6 +25,81 @@ export default function SettingsPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const { toast } = useToast();
+  const cancelCardRef = useRef<HTMLDivElement>(null);
+
+  // Component mount logging
+  useEffect(() => {
+    console.log("Settings page mounted");
+    return () => {
+      console.log("Settings page unmounted");
+    };
+  }, []);
+
+  // Add logging for subscription state changes
+  useEffect(() => {
+    console.log("Subscription state changed:", {
+      subscription,
+      isSubscribed,
+      isCanceled,
+      loading,
+      timestamp: new Date().toISOString()
+    });
+  }, [subscription, isSubscribed, isCanceled, loading]);
+
+  // Add logging for render conditions
+  const shouldShowCancelCard = isSubscribed === true && isCanceled === false;
+  useEffect(() => {
+    console.log("Cancel card visibility condition:", {
+      shouldShowCancelCard,
+      isSubscribed,
+      isCanceled,
+      timestamp: new Date().toISOString()
+    });
+  }, [shouldShowCancelCard, isSubscribed, isCanceled]);
+
+  // Track cancel card dimensions for layout shift debugging
+  useEffect(() => {
+    if (cancelCardRef.current) {
+      const { offsetHeight, offsetWidth } = cancelCardRef.current;
+      console.log("Cancel card dimensions:", {
+        height: offsetHeight,
+        width: offsetWidth,
+        visible: shouldShowCancelCard,
+        timestamp: new Date().toISOString()
+      });
+    }
+  }, [shouldShowCancelCard, loading]);
+
+  const handleReactivateSubscription = async () => {
+    try {
+      setIsLoading(true);
+      const response = await fetch('/api/stripe/reactivate-subscription', {
+        method: 'POST',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to reactivate subscription');
+      }
+
+      toast({
+        title: 'Success',
+        description: 'Your subscription has been reactivated.',
+        variant: 'success',
+      });
+      
+      // Refresh the page to update subscription status
+      window.location.reload();
+    } catch (error) {
+      console.error('Error:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to reactivate subscription. Please try again.',
+        variant: 'error',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleSignOut = async () => {
     console.log("Settings page: handleSignOut called");
@@ -88,7 +163,10 @@ export default function SettingsPage() {
 
   return (
     <div className="flex min-h-screen flex-col">
-      <SharedHeader />
+      {/* Fixed position header with z-index to ensure it's visible */}
+      <div className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-md border-b border-purple-500/10">
+        <SharedHeader />
+      </div>
 
       {/* Background Pattern */}
       <div className="fixed inset-0 bg-[#F8F8FC]" style={{
@@ -96,7 +174,7 @@ export default function SettingsPage() {
         backgroundSize: '12px 12px'
       }} />
 
-      <main className="flex-1 pt-24">
+      <main className="flex-1 pt-20">
         <div className="max-w-4xl mx-auto p-6 space-y-8">
           {/* Header Section */}
           <div className="text-center space-y-4">
@@ -132,25 +210,20 @@ export default function SettingsPage() {
                         {isSubscribed 
                           ? (isCanceled 
                               ? `Your subscription will end on ${subscription?.current_period_end ? new Date(subscription.current_period_end).toLocaleDateString() : 'the end of your billing period'}`
-                              : "Manage your subscription plan and billing details")
+                              : "View and update your billing details and payment method")
                           : "Upgrade to a premium plan to access more features"}
                       </p>
+                      {isSubscribed && isCanceled ? (
+                        <div className="mt-2 flex items-center text-sm text-amber-600">
+                          <AlertTriangle className="h-4 w-4 mr-1" />
+                          <span>Your subscription has been canceled but is still active</span>
+                        </div>
+                      ) : null}
                     </div>
                   </div>
                   <div className="flex space-x-3">
                     {isSubscribed ? (
                       <>
-                        {!isCanceled && (
-                          <Button 
-                            variant="outline" 
-                            className="border-red-200 text-red-500 hover:bg-red-50 hover:text-red-600"
-                            onClick={() => setShowCancelDialog(true)}
-                            disabled={isLoading}
-                          >
-                            {isLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                            Cancel Subscription
-                          </Button>
-                        )}
                         <Button 
                           variant="default" 
                           className="bg-purple-500 hover:bg-purple-600 text-white"
@@ -174,6 +247,83 @@ export default function SettingsPage() {
                   </div>
                 </div>
               </Card>
+
+              {/* Cancel Subscription Card - Always render the container but conditionally show content */}
+              <div className="cancel-subscription-container min-h-[120px]" ref={cancelCardRef}>
+                <Card className="p-8 bg-white/80 backdrop-blur-sm border-purple-500/10">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-4">
+                      <div className="p-3 rounded-full bg-red-100">
+                        <AlertTriangle className="h-6 w-6 text-red-500" />
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-semibold">Cancel Plan</h3>
+                        <p className="text-sm text-muted-foreground">
+                          Cancel your subscription but retain access until the end of your current billing period
+                        </p>
+                      </div>
+                    </div>
+                    {loading ? (
+                      <Button 
+                        variant="outline" 
+                        className="border-red-200 text-red-500 hover:bg-red-50 hover:text-red-600"
+                        disabled={true}
+                      >
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                        Loading...
+                      </Button>
+                    ) : shouldShowCancelCard ? (
+                      <Button 
+                        variant="outline" 
+                        className="border-red-200 text-red-500 hover:bg-red-50 hover:text-red-600"
+                        onClick={() => setShowCancelDialog(true)}
+                        disabled={isLoading}
+                      >
+                        {isLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                        Cancel Subscription
+                      </Button>
+                    ) : (
+                      <Button 
+                        variant="outline" 
+                        className="border-gray-200 text-gray-400"
+                        disabled={true}
+                      >
+                        Not Available
+                      </Button>
+                    )}
+                  </div>
+                </Card>
+              </div>
+
+              {/* Reactivate Subscription Card - Always render with consistent height */}
+              <div className="reactivate-subscription-container min-h-[120px]">
+                {isSubscribed && isCanceled ? (
+                  <Card className="p-8 bg-white/80 backdrop-blur-sm border-purple-500/10">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-4">
+                        <div className="p-3 rounded-full bg-green-100">
+                          <CreditCard className="h-6 w-6 text-green-500" />
+                        </div>
+                        <div>
+                          <h3 className="text-lg font-semibold">Reactivate Subscription</h3>
+                          <p className="text-sm text-muted-foreground">
+                            Your subscription is currently set to cancel at the end of the billing period. You can reactivate it to continue your premium access.
+                          </p>
+                        </div>
+                      </div>
+                      <Button 
+                        variant="outline" 
+                        className="border-green-200 text-green-600 hover:bg-green-50 hover:text-green-700"
+                        onClick={handleReactivateSubscription}
+                        disabled={isLoading}
+                      >
+                        {isLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                        Reactivate Subscription
+                      </Button>
+                    </div>
+                  </Card>
+                ) : null}
+              </div>
             </>
           )}
 
@@ -212,7 +362,7 @@ export default function SettingsPage() {
               Cancel Subscription
             </DialogTitle>
             <DialogDescription>
-              Are you sure you want to cancel your subscription? You'll still have access to premium features until the end of your current billing period.
+              Are you sure you want to cancel your subscription? You'll still have access to premium features until {subscription?.current_period_end ? new Date(subscription.current_period_end).toLocaleDateString() : 'the end of your current billing period'}. After that, your account will revert to the free plan.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="flex space-x-2 sm:justify-end">

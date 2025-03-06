@@ -14,7 +14,46 @@ export const saveVideoSummary = async (
   }
 ) => {
   console.log('saveVideoSummary called with userId:', userId, 'videoId:', videoData.videoId);
+  
   try {
+    // First, count how many video lectures this user already has
+    const { count, error: countError } = await supabase
+      .from('content')
+      .select('id', { count: 'exact' })
+      .eq('user_id', userId)
+      .eq('type', 'video');
+    
+    if (countError) {
+      console.error('Error counting existing video lectures:', countError);
+    } else {
+      console.log(`User ${userId} has ${count} existing video lectures`);
+      
+      // If user has 3 or more lectures, we'll need to delete the oldest one(s)
+      if (count && count >= 3) {
+        console.log(`User has reached the limit of 3 video lectures. Will need to delete oldest lecture(s)`);
+        
+        // Get the oldest lectures (we'll need this for the actual implementation)
+        const { data: oldestLectures, error: fetchError } = await supabase
+          .from('content')
+          .select('id, created_at, title')
+          .eq('user_id', userId)
+          .eq('type', 'video')
+          .order('created_at', { ascending: true })
+          .limit(count - 2); // This will get lectures to delete to maintain only 3
+        
+        if (fetchError) {
+          console.error('Error fetching oldest lectures:', fetchError);
+        } else {
+          console.log(`Found ${oldestLectures.length} lecture(s) that would need to be deleted:`, 
+            oldestLectures.map(l => ({ id: l.id, title: l.title, created_at: l.created_at })));
+          
+          // In the actual implementation, we would delete these lectures here
+          // For now, we're just logging them
+        }
+      }
+    }
+
+    // Insert the new lecture as usual
     const { data, error } = await supabase
       .from('content')
       .insert({
@@ -123,31 +162,12 @@ export const getRecentLectures = async (userId: string, limit: number = 3) => {
           }
         }
         
-        // If no localStorage lectures or not in browser, return sample lectures
-        console.log('No lectures found in localStorage, returning sample lectures');
-        return [
-          {
-            id: 'sample-1',
-            title: 'Machine Learning Basics',
-            video_id: 'dQw4w9WgXcQ',
-            duration: 'PT15M30S',
-            created_at: new Date().toISOString()
-          },
-          {
-            id: 'sample-2',
-            title: 'Data Structures',
-            video_id: 'dQw4w9WgXcQ',
-            duration: 'PT10M45S',
-            created_at: new Date(Date.now() - 86400000).toISOString() // 1 day ago
-          },
-          {
-            id: 'sample-3',
-            title: 'Web Development',
-            video_id: 'dQw4w9WgXcQ',
-            duration: 'PT20M15S',
-            created_at: new Date(Date.now() - 172800000).toISOString() // 2 days ago
-          }
-        ];
+        // ISSUE: Instead of returning sample lectures, we should return an empty array
+        // when no real lectures are found
+        console.log('DEBUG: No lectures found in database or localStorage - SHOULD RETURN EMPTY ARRAY');
+        
+        // Return empty array instead of sample lectures
+        return [];
       }
       
       return transformedData;
@@ -181,61 +201,18 @@ export const getRecentLectures = async (userId: string, limit: number = 3) => {
         }
       }
       
-      // If no localStorage lectures or not in browser, return sample lectures
-      console.log('No lectures found in localStorage, returning sample lectures');
-      return [
-        {
-          id: 'sample-1',
-          title: 'Machine Learning Basics',
-          video_id: 'dQw4w9WgXcQ',
-          duration: 'PT15M30S',
-          created_at: new Date().toISOString()
-        },
-        {
-          id: 'sample-2',
-          title: 'Data Structures',
-          video_id: 'dQw4w9WgXcQ',
-          duration: 'PT10M45S',
-          created_at: new Date(Date.now() - 86400000).toISOString() // 1 day ago
-        },
-        {
-          id: 'sample-3',
-          title: 'Web Development',
-          video_id: 'dQw4w9WgXcQ',
-          duration: 'PT20M15S',
-          created_at: new Date(Date.now() - 172800000).toISOString() // 2 days ago
-        }
-      ];
+      // ISSUE: Instead of returning sample lectures, we should return an empty array
+      // when no real lectures are found
+      console.log('DEBUG: No lectures found in database or localStorage via RPC - SHOULD RETURN EMPTY ARRAY');
+      
+      // Return empty array instead of sample lectures
+      return [];
     }
     
     return rpcData;
   } catch (error) {
     console.error('Error in getRecentLectures:', error);
-    
-    // Return sample lectures in case of error
-    return [
-      {
-        id: 'sample-1',
-        title: 'Machine Learning Basics',
-        video_id: 'dQw4w9WgXcQ',
-        duration: 'PT15M30S',
-        created_at: new Date().toISOString()
-      },
-      {
-        id: 'sample-2',
-        title: 'Data Structures',
-        video_id: 'dQw4w9WgXcQ',
-        duration: 'PT10M45S',
-        created_at: new Date(Date.now() - 86400000).toISOString() // 1 day ago
-      },
-      {
-        id: 'sample-3',
-        title: 'Web Development',
-        video_id: 'dQw4w9WgXcQ',
-        duration: 'PT20M15S',
-        created_at: new Date(Date.now() - 172800000).toISOString() // 2 days ago
-      }
-    ];
+    return [];
   }
 };
 
@@ -244,8 +221,11 @@ export const getRecentLectures = async (userId: string, limit: number = 3) => {
  */
 export const getLectureById = async (lectureId: string) => {
   try {
+    console.log(`[getLectureById] Fetching lecture with ID: ${lectureId}`);
+    
     // If it's a sample lecture ID, return sample data
     if (lectureId.startsWith('sample-')) {
+      console.log(`[getLectureById] Returning sample lecture data for ID: ${lectureId}`);
       const sampleLectures = {
         'sample-1': {
           id: 'sample-1',
@@ -282,16 +262,27 @@ export const getLectureById = async (lectureId: string) => {
       return sampleLectures[lectureId as keyof typeof sampleLectures] || null;
     }
     
+    console.log(`[getLectureById] Querying database for lecture ID: ${lectureId}`);
     const { data, error } = await supabase
       .from('content')
       .select('*')
       .eq('id', lectureId)
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error(`[getLectureById] Error fetching lecture ${lectureId}:`, error);
+      throw error;
+    }
+    
+    console.log(`[getLectureById] Successfully retrieved lecture:`, {
+      id: data?.id,
+      title: data?.title,
+      hasContent: !!data?.content
+    });
+    
     return data;
   } catch (error) {
-    console.error('Error fetching lecture:', error);
+    console.error('[getLectureById] Error fetching lecture:', error);
     return null;
   }
 }; 

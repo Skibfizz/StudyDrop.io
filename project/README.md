@@ -1,6 +1,6 @@
-# StudyMind - AI-Powered Learning Platform
+# StudyDrop - AI-Powered Learning Platform
 
-StudyMind is a modern learning platform that leverages AI to enhance your study experience. Process YouTube lectures, generate flashcards, and improve your study materials with AI-powered tools.
+StudyDrop is a modern learning platform that leverages AI to enhance your study experience. Process YouTube lectures, generate flashcards, and improve your study materials with AI-powered tools.
 
 ## 🚀 Features
 
@@ -25,8 +25,8 @@ StudyMind is a modern learning platform that leverages AI to enhance your study 
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/studymind.git
-cd studymind
+git clone https://github.com/yourusername/studydrop.git
+cd studydrop
 ```
 
 2. Install dependencies:
@@ -98,7 +98,7 @@ yarn test
 
 The easiest way to deploy is using the [Vercel Platform](https://vercel.com).
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/yourusername/studymind)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/yourusername/studydrop)
 
 ## 🤝 Contributing
 

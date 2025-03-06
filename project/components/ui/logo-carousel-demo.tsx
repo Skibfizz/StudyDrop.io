@@ -15,14 +15,14 @@ type Logo = {
 function SvgImage({ src, alt, ...props }: { src: string; alt: string; [key: string]: any }) {
   return (
     <div className="flex items-center justify-center w-full h-full" {...props}>
-      <div className="relative w-[140px] h-[70px] flex items-center justify-center">
+      <div className="relative w-[80px] h-[40px] sm:w-[100px] sm:h-[50px] md:w-[120px] md:h-[60px] lg:w-[140px] lg:h-[70px] flex items-center justify-center">
         <Image 
           src={src} 
           alt={alt} 
           fill
           className="object-contain" 
           priority
-          sizes="140px"
+          sizes="(max-width: 640px) 80px, (max-width: 768px) 100px, (max-width: 1024px) 120px, 140px"
         />
       </div>
     </div>
@@ -98,10 +98,10 @@ export function LogoCarouselDemo() {
   }, []);
 
   return (
-    <div className="space-y-8 py-24">
-      <div className="mx-auto flex w-full max-w-screen-lg flex-col items-center space-y-8">
+    <div className="space-y-4 sm:space-y-6 md:space-y-8 py-8 sm:py-12 md:py-16">
+      <div className="mx-auto flex w-full max-w-screen-lg flex-col items-center space-y-4 sm:space-y-6 md:space-y-8">
         <div className="text-center">
-          <h3 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-black pb-3">
+          <h3 className="text-lg sm:text-xl md:text-2xl lg:text-3xl xl:text-4xl font-bold text-black pb-2 sm:pb-3">
             The secret weapon of top-performing university students
           </h3>
         </div>

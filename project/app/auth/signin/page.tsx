@@ -57,7 +57,7 @@ export default function SignIn() {
                 <div className="inline-flex items-center justify-center mb-6">
                   <BookOpen className="h-8 w-8 text-purple-500" />
                   <span className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-blue-600 ml-2">
-                    StudyMind
+                    StudyDrop
                   </span>
                 </div>
                 

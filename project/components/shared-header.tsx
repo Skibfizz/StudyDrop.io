@@ -9,7 +9,7 @@ export function SharedHeader() {
   const { user, loading } = useAuth();
 
   return (
-    <header className="fixed top-0 z-50 w-full theme-header">
+    <header className="w-full theme-header shared-header">
       <div className="flex h-14 items-center px-6">
         <MainNav />
         <div className="ml-auto flex items-center space-x-4">

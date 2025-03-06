@@ -144,9 +144,14 @@ export default function PrivacyPolicyPage() {
               <p>
                 If you have any questions about this Privacy Policy, please contact us at:
               </p>
-              <p className="font-medium">
-                Email: privacy@studydrop.com
-              </p>
+              <div className="mt-4">
+                <a 
+                  href="/support" 
+                  className="inline-flex items-center justify-center rounded-md bg-primary px-6 py-3 text-base font-medium text-white shadow-sm hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                >
+                  Contact Support
+                </a>
+              </div>
             </section>
           </div>
         </div>

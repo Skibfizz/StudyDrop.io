@@ -10,7 +10,7 @@ Disallow: /settings/
 Disallow: /profile/
 
 # Sitemap location
-Sitemap: https://studymind.ai/sitemap.xml
+Sitemap: https://studydrop.ai/sitemap.xml
 
 # Crawl delay
 Crawl-delay: 10 

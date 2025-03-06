@@ -10,6 +10,8 @@ type CookieValue = {
 
 export async function middleware(request: NextRequest) {
   console.log("Middleware called for path:", request.nextUrl.pathname);
+  console.log("Request URL:", request.nextUrl.toString());
+  console.log("Request referrer:", request.headers.get('referer'));
   
   // Create a response object that we'll modify and return
   let supabaseResponse = NextResponse.next({
@@ -75,8 +77,10 @@ export async function middleware(request: NextRequest) {
   if (!user && isProtectedRoute) {
     // no user, redirect to the login page
     console.log("No user detected for protected route, redirecting to login");
+    console.log("ISSUE DETECTED: Redirecting to '/login' which doesn't exist, should be '/auth/signin'");
     const url = request.nextUrl.clone()
-    url.pathname = '/login'
+    url.pathname = '/auth/signin'
+    console.log("Redirecting to:", url.toString());
     return NextResponse.redirect(url)
   }
 

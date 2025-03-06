@@ -13,7 +13,7 @@ export function MainNav() {
     <div className="flex items-center justify-between w-full">
       <Link href="/" className="flex items-center space-x-2">
         <BookOpen className="h-6 w-6" />
-        <span className="font-bold">StudyMind</span>
+        <span className="font-bold">StudyDrop</span>
       </Link>
       <div className="flex items-center ml-auto">
         <nav className="flex items-center space-x-6 text-sm">
