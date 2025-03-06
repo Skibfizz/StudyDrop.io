@@ -142,245 +142,46 @@ ${transcript}`
 
 // JavaScript fallback for fetching YouTube transcripts
 async function fetchTranscriptWithJS(videoId: string) {
-  console.log('Using JavaScript fallback to fetch transcript for video:', videoId);
+  console.log('Using optimized method to fetch transcript for video:', videoId);
   try {
-    // Use the improved transcript fetching methods
+    // Use only the most effective transcript fetching method
+    console.log('Attempting to fetch transcript via third-party APIs');
     
-    // Method 1: Try using YouTube's timedtext API
     try {
-      console.log('Attempting to fetch transcript via YouTube timedtext API');
+      // Create a timeout promise
+      const timeoutPromise = new Promise<Response>((_, reject) => {
+        setTimeout(() => reject(new Error('Request timeout after 8 seconds')), 8000);
+      });
       
-      // Try the JSON format first
-      try {
-        const response = await fetch(
-          `https://www.youtube.com/api/timedtext?lang=en&v=${videoId}&fmt=json3`,
-          { 
-            method: 'GET',
-            headers: {
-              'Content-Type': 'application/json',
-            }
-          }
-        );
-        
-        if (response.ok) {
-          const data = await response.json();
-          if (data && data.events) {
-            console.log('Successfully fetched transcript via YouTube timedtext API (JSON format)');
-            
-            // Extract the transcript text from the JSON response
-            const transcriptText = data.events
-              .filter((event: any) => event.segs && event.segs.length > 0)
-              .map((event: any) => {
-                return event.segs.map((seg: any) => seg.utf8).join(' ');
-              })
-              .join(' ');
-            
-            return transcriptText;
-          }
-        }
-      } catch (jsonError) {
-        console.error('Error using JSON format:', jsonError);
-      }
-      
-      // Try the XML format as fallback
-      try {
-        const response = await fetch(
-          `https://www.youtube.com/api/timedtext?lang=en&v=${videoId}`,
-          { 
-            method: 'GET',
-            headers: {
-              'Content-Type': 'application/xml',
-            }
-          }
-        );
-        
-        if (response.ok) {
-          const xmlText = await response.text();
-          
-          // Extract text from XML
-          const textMatches = xmlText.match(/<text[^>]*>(.*?)<\/text>/g) || [];
-          if (textMatches.length > 0) {
-            console.log('Successfully fetched transcript via YouTube timedtext API (XML format)');
-            
-            const transcriptText = textMatches
-              .map(segment => {
-                // Extract the text content and decode HTML entities
-                return segment.replace(/<text[^>]*>(.*?)<\/text>/, '$1')
-                  .replace(/&amp;/g, '&')
-                  .replace(/&lt;/g, '<')
-                  .replace(/&gt;/g, '>')
-                  .replace(/&quot;/g, '"')
-                  .replace(/&#39;/g, "'");
-              })
-              .join(' ');
-            
-            return transcriptText;
-          }
-        }
-      } catch (xmlError) {
-        console.error('Error using XML format:', xmlError);
-      }
-      
-      console.log('YouTube timedtext API failed, trying HTML extraction');
-    } catch (timedTextError) {
-      console.error('Error using timedtext API:', timedTextError);
-    }
-    
-    // Method 2: Try extracting from YouTube page HTML
-    try {
-      console.log('Attempting to extract transcript from YouTube page HTML');
-      const response = await fetch(`https://www.youtube.com/watch?v=${videoId}`, {
+      // Create the fetch promise
+      const fetchPromise = fetch(`https://yt-transcript-api.vercel.app/api/transcript?videoId=${videoId}`, {
+        method: 'GET',
         headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+          'Content-Type': 'application/json',
         }
       });
       
+      // Race the fetch against the timeout
+      const response = await Promise.race([fetchPromise, timeoutPromise]) as Response;
+      
       if (response.ok) {
-        const html = await response.text();
-        
-        // Try multiple regex patterns to extract caption tracks
-        const patterns = [
-          /"captionTracks":(\[.*?\])(?=,)/,
-          /\\"captionTracks\\":(\[.*?\])(?=,)/
-        ];
-        
-        let captionTracks = null;
-        
-        // Try each pattern
-        for (const pattern of patterns) {
-          const match = html.match(pattern);
-          if (match && match.length >= 2) {
-            try {
-              // Handle escaped quotes if needed
-              const jsonStr = pattern.toString().includes('\\\\') 
-                ? match[1].replace(/\\"/g, '"').replace(/\\\\/g, '\\')
-                : match[1];
-              
-              captionTracks = JSON.parse(jsonStr);
-              break;
-            } catch (e) {
-              console.log('Failed to parse caption tracks from pattern');
-            }
-          }
-        }
-        
-        if (captionTracks && Array.isArray(captionTracks) && captionTracks.length > 0) {
-          // Try to find English captions, with fallbacks to other languages
-          const trackPriorities = [
-            // First try to find English tracks
-            (track: any) => track.languageCode === 'en',
-            (track: any) => track.vssId && track.vssId.indexOf('.en') > 0,
-            (track: any) => track.name && track.name.simpleText && track.name.simpleText.toLowerCase().includes('english'),
-            
-            // Then try auto-generated English
-            (track: any) => track.vssId && track.vssId.indexOf('a.en') > 0,
-            
-            // Then try any track as last resort
-            (track: any) => true
-          ];
+        const data = await response.json();
+        if (data && data.transcript) {
+          console.log('Successfully fetched transcript via third-party API');
           
-          let selectedTrack = null;
-          for (const priorityCheck of trackPriorities) {
-            selectedTrack = captionTracks.find(priorityCheck);
-            if (selectedTrack && selectedTrack.baseUrl) break;
-          }
+          const transcriptText = data.transcript
+            .map((item: any) => item.text)
+            .join(' ');
           
-          if (selectedTrack && selectedTrack.baseUrl) {
-            console.log('Found caption URL in YouTube page HTML');
-            
-            // Fetch the actual transcript
-            const transcriptResponse = await fetch(selectedTrack.baseUrl);
-            if (transcriptResponse.ok) {
-              const transcriptXml = await transcriptResponse.text();
-              
-              // Parse the XML to extract text
-              const textSegments = transcriptXml.match(/<text[^>]*>(.*?)<\/text>/g) || [];
-              if (textSegments.length > 0) {
-                console.log('Successfully extracted transcript from YouTube page HTML');
-                
-                const transcriptText = textSegments
-                  .map(segment => {
-                    // Extract the text content and decode HTML entities
-                    return segment.replace(/<text[^>]*>(.*?)<\/text>/, '$1')
-                      .replace(/&amp;/g, '&')
-                      .replace(/&lt;/g, '<')
-                      .replace(/&gt;/g, '>')
-                      .replace(/&quot;/g, '"')
-                      .replace(/&#39;/g, "'");
-                  })
-                  .join(' ');
-                
-                return transcriptText;
-              }
-            }
-          }
+          return transcriptText;
         }
       }
-      
-      console.log('HTML extraction failed, trying third-party APIs');
-    } catch (htmlError) {
-      console.error('Error extracting from HTML:', htmlError);
+    } catch (apiError) {
+      console.error('Error using third-party API:', apiError);
     }
     
-    // Method 3: Try using third-party APIs
-    try {
-      console.log('Attempting to fetch transcript via third-party APIs');
-      
-      // First third-party API
-      try {
-        const response = await fetch(`https://yt-transcript-api.vercel.app/api/transcript?videoId=${videoId}`, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-          }
-        });
-        
-        if (response.ok) {
-          const data = await response.json();
-          if (data && data.transcript) {
-            console.log('Successfully fetched transcript via first third-party API');
-            
-            const transcriptText = data.transcript
-              .map((item: any) => item.text)
-              .join(' ');
-            
-            return transcriptText;
-          }
-        }
-      } catch (firstApiError) {
-        console.error('Error using first third-party API:', firstApiError);
-      }
-      
-      // Second third-party API
-      try {
-        const response = await fetch(`https://youtubetranscript.com/?server_vid=${videoId}`, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-          }
-        });
-        
-        if (response.ok) {
-          const data = await response.json();
-          if (data && Array.isArray(data)) {
-            console.log('Successfully fetched transcript via second third-party API');
-            
-            const transcriptText = data
-              .map((item: any) => item.text)
-              .join(' ');
-            
-            return transcriptText;
-          }
-        }
-      } catch (secondApiError) {
-        console.error('Error using second third-party API:', secondApiError);
-      }
-    } catch (thirdPartyError) {
-      console.error('Error using third-party APIs:', thirdPartyError);
-    }
-    
-    // Method 5: If no captions are available, generate a mock transcript
-    console.log('No transcript found using any method, generating mock transcript');
+    // If transcript fetching fails, return a fallback message
+    console.log('No transcript found, generating fallback message');
     return `This video does not have captions available. StudyDrop will generate study materials based on the video title and available metadata. Please note that without the actual transcript, the quality of the generated materials may be limited.`;
   } catch (error) {
     console.error('Error in fetchTranscriptWithJS:', error);
@@ -390,76 +191,13 @@ async function fetchTranscriptWithJS(videoId: string) {
 
 async function getTranscript(videoId: string) {
   try {
-    // Check if we're in production environment - if so, skip Python attempt
-    if (process.env.NODE_ENV === 'production' && process.env.VERCEL_ENV === 'production') {
-      console.log('Running in production environment, skipping Python execution and using JavaScript fallback directly');
-      return await fetchTranscriptWithJS(videoId);
-    }
-    
-    // Get the absolute path to the script and log relevant paths
-    const scriptPath = path.join(process.cwd(), 'scripts', 'get_transcript.py');
-    
-    // Enhanced debugging information
-    console.log('Environment Debug Info:', {
-      currentWorkingDir: process.cwd(),
-      scriptPath,
-      scriptExists: require('fs').existsSync(scriptPath),
-      nodeVersion: process.version,
-      platform: process.platform,
-      env: {
-        PATH: process.env.PATH,
-        PYTHONPATH: process.env.PYTHONPATH,
-        VERCEL_REGION: process.env.VERCEL_REGION,
-        VERCEL_ENV: process.env.VERCEL_ENV,
-        NODE_ENV: process.env.NODE_ENV
-      }
-    });
-    
-    // Try different Python commands
-    const pythonCommands = ['python3', 'python', 'py'];
-    let transcript = null;
-    let lastError = null;
-    
-    for (const pythonCmd of pythonCommands) {
-      try {
-        console.log(`Attempting to execute Python script with: ${pythonCmd} ${scriptPath} ${videoId}`);
-        const { stdout, stderr } = await execAsync(`${pythonCmd} ${scriptPath} ${videoId}`);
-        
-        if (stderr) {
-          console.warn(`${pythonCmd} script stderr:`, stderr);
-        }
-        
-        console.log(`${pythonCmd} script stdout length:`, stdout.length);
-        
-        try {
-          const result = JSON.parse(stdout);
-          if (result.success) {
-            console.log(`Successfully fetched transcript with ${pythonCmd}`);
-            return result.transcript;
-          } else {
-            console.error(`${pythonCmd} script error:`, result.error, result.details);
-            lastError = new Error(result.error);
-          }
-        } catch (parseError) {
-          console.error(`Error parsing ${pythonCmd} script output:`, parseError);
-          console.log('Raw stdout:', stdout.substring(0, 500) + '...');
-          lastError = new Error(`Failed to parse ${pythonCmd} script output`);
-        }
-      } catch (execError) {
-        console.error(`Error executing ${pythonCmd} script:`, execError);
-        lastError = execError;
-        // Continue to the next Python command
-      }
-    }
-    
-    // If all Python attempts failed, fall back to JavaScript
-    console.log('All Python execution attempts failed, falling back to JavaScript implementation');
+    console.log('Fetching transcript for video:', videoId);
+    // Directly use the optimized JavaScript method
     return await fetchTranscriptWithJS(videoId);
   } catch (error: unknown) {
     console.error('Error in getTranscript:', error);
-    // Always fall back to JavaScript implementation instead of throwing
-    console.log('Falling back to JavaScript implementation after error');
-    return await fetchTranscriptWithJS(videoId);
+    // Return fallback message on error
+    return `This video does not have captions available. StudyDrop will generate study materials based on the video title and available metadata. Please note that without the actual transcript, the quality of the generated materials may be limited.`;
   }
 }
 
