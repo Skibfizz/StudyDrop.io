@@ -1,6 +1,18 @@
 {
-  "buildCommand": "npm install && npm run build",
+  "buildCommand": "pip install -r project/scripts/requirements.txt || echo 'Python dependencies installation failed, but continuing build' && npm run build",
   "outputDirectory": ".next",
   "installCommand": "npm install",
-  "framework": "nextjs"
+  "framework": "nextjs",
+  "functions": {
+    "api/youtube/**": {
+      "runtime": "nodejs18.x",
+      "memory": 1024
+    }
+  },
+  "build": {
+    "env": {
+      "PYTHON_VERSION": "3.12",
+      "NODE_VERSION": "20.x"
+    }
+  }
 } 
