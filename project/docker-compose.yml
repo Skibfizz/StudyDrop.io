@@ -6,6 +6,7 @@ services:
       context: .
       dockerfile: Dockerfile.dev
     ports:
+      # Port mapping for local development only - not used in production
       - "3000:3000"
     volumes:
       - .:/app
@@ -34,6 +35,7 @@ services:
     environment:
       - STRIPE_API_KEY=${STRIPE_SECRET_KEY}
       - STRIPE_DEVICE_NAME=docker-compose
+    # This is for local webhook testing only - in production, webhooks are configured in the Stripe dashboard
     command: listen --forward-to app:3000/api/webhooks/stripe
 
 volumes:

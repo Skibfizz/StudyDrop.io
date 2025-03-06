@@ -53,7 +53,7 @@ yarn dev
 pnpm dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) to see the result.
+Open [https://studydrop.io](https://studydrop.io) to see the result.
 
 ## 🔧 Configuration
 

@@ -1,48 +1,76 @@
-# YouTube API Setup Instructions
+# YouTube Transcript API Integration
 
-To properly process YouTube videos in StudyDrop, you need to set up a YouTube Data API key. Follow these steps:
+## Overview
 
-## 1. Create a Google Cloud Project
+This document explains how StudyDrop fetches YouTube video transcripts using the Supadata API.
 
-1. Go to the [Google Cloud Console](https://console.cloud.google.com/)
-2. Create a new project or select an existing one
-3. Make note of your project ID
+## Transcript Fetching Method
 
-## 2. Enable the YouTube Data API
+StudyDrop exclusively uses the **Supadata API** for fetching YouTube video transcripts. This provides:
 
-1. In your Google Cloud project, go to "APIs & Services" > "Library"
-2. Search for "YouTube Data API v3"
-3. Click on it and press "Enable"
+- High-quality transcripts with accurate timestamps
+- Support for multiple languages
+- Caching for faster retrieval
+- Reliable transcript access
 
-## 3. Create API Credentials
+## Implementation Details
 
-1. Go to "APIs & Services" > "Credentials"
-2. Click "Create Credentials" > "API Key"
-3. Copy the generated API key
+### API Endpoint
 
-## 4. Add the API Key to Your Environment
+The application uses the following endpoint to fetch transcripts:
 
-1. Add the following to your `.env.local` file:
-   ```
-   YOUTUBE_API_KEY=your_api_key_here
-   ```
-2. If deploying to Vercel, add the `YOUTUBE_API_KEY` environment variable in your project settings
+```
+https://api.supadata.ai/v1/youtube/transcript
+```
 
-## 5. Set API Restrictions (Optional but Recommended)
+### API Key
 
-1. Go back to the Google Cloud Console > "APIs & Services" > "Credentials"
-2. Find your API key and click "Edit"
-3. Under "API restrictions", select "Restrict key"
-4. Add the "YouTube Data API v3" to the list of restricted APIs
-5. Save your changes
+The Supadata API requires an API key for authentication. This key is stored securely in the application's environment variables.
+
+### Response Format
+
+The Supadata API returns transcript data in the following format:
+
+```json
+{
+  "content": [
+    {
+      "text": "Transcript segment text",
+      "offset": 1000, // milliseconds
+      "duration": 2000 // milliseconds
+    },
+    // More segments...
+  ],
+  "text": "Full transcript text..."
+}
+```
+
+### Data Processing
+
+The application processes this data to:
+
+1. Convert timestamps from milliseconds to seconds
+2. Format the transcript into a consistent structure
+3. Cache the results in Supabase for future use
+
+## Usage in the Application
+
+The transcript data is used for:
+
+- Generating lecture summaries
+- Creating flashcards
+- Providing searchable content
+- Enhancing the learning experience
 
 ## Troubleshooting
 
-If you're still having issues with YouTube transcript processing:
+If you're having issues with YouTube transcript processing:
 
-1. Make sure your API key is correctly set in the environment variables
-2. Check that the YouTube Data API is enabled in your Google Cloud project
-3. Verify that the video you're trying to process has captions available
-4. Check your API quota usage in the Google Cloud Console
+1. Verify that the video has captions available
+2. Check that the Supadata API key is correctly configured
+3. Ensure the video ID is correctly extracted from the URL
+4. Check the network logs for any API errors
 
-For more information, see the [YouTube Data API documentation](https://developers.google.com/youtube/v3/getting-started). 
+## Support
+
+For any issues with transcript fetching, please contact the StudyDrop support team. 

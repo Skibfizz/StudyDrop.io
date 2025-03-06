@@ -4,6 +4,7 @@ import path from 'path';
 import OpenAI from 'openai';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
+import axios from 'axios';
 
 const execAsync = promisify(exec);
 const openai = new OpenAI({
@@ -66,46 +67,39 @@ async function processTranscriptWithAI(transcript: string) {
 
 async function getTranscript(videoId: string) {
   try {
-    // Get the absolute path to the script and log relevant paths
-    const scriptPath = path.join(process.cwd(), 'scripts', 'get_transcript.py');
-    console.log('Debug Info:', {
-      currentWorkingDir: process.cwd(),
-      scriptPath,
-      scriptExists: require('fs').existsSync(scriptPath),
-      pythonPath: process.env.PATH
-    });
+    console.log('Fetching transcript for video ID:', videoId);
     
-    // Run the Python script with absolute path and capture all output
-    console.log('Executing command:', `python "${scriptPath}" ${videoId}`);
-    const { stdout, stderr } = await execAsync(`python "${scriptPath}" ${videoId}`);
+    // Use the Supadata API to get the transcript
+    const SUPADATA_API_KEY = process.env.SUPADATA_API_KEY || "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiIsImtpZCI6IjEifQ.eyJpc3MiOiJuYWRsZXMiLCJpYXQiOiIxNzQxMzAyMDQ0IiwicHVycG9zZSI6ImFwaV9hdXRoZW50aWNhdGlvbiIsInN1YiI6ImNkODlmMzFlZjRhMTQ3ZjViN2MyZGJjNTc0Zjg2ODczIn0.xrE0BFyoFyJXByikbMfp35gCb8Ve6N6JkiLkiIuOMPY";
     
-    console.log('Python stdout:', stdout);
-    console.log('Python stderr:', stderr);
-
-    // Only treat stderr as error if it doesn't contain our success message
-    if (stderr && !stderr.includes('Successfully fetched transcript')) {
-      console.error('Python script error:', stderr);
-      throw new Error('Failed to fetch video transcript');
+    if (!SUPADATA_API_KEY) {
+      throw new Error('Supadata API key is not configured');
     }
-
-    try {
-      const result = JSON.parse(stdout);
-      console.log('Parsed result:', result);
-      if (!result.success) {
-        throw new Error(result.error || 'Failed to fetch transcript');
+    
+    // Call the Supadata API to get the transcript
+    const response = await axios.get(
+      `https://api.supadata.ai/v1/youtube/transcript`,
+      {
+        params: {
+          videoId: videoId,
+          text: true // Get the full text transcript
+        },
+        headers: {
+          'x-api-key': SUPADATA_API_KEY
+        },
+        timeout: 30000 // 30 seconds timeout
       }
-      return result.transcript;
-    } catch (parseError) {
-      console.error('JSON parsing error:', parseError);
-      console.log('Raw stdout:', stdout);
-      throw new Error('Failed to parse transcript data');
+    );
+    
+    if (response.data && response.data.text) {
+      console.log('Successfully fetched transcript from Supadata API');
+      return response.data.text;
+    } else {
+      throw new Error('Invalid response format from Supadata API');
     }
-  } catch (error) {
-    console.error('Detailed error in getTranscript:', {
-      error: error instanceof Error ? error.message : 'Unknown error',
-      stack: error instanceof Error ? error.stack : undefined
-    });
-    throw new Error('Failed to get transcript: ' + (error instanceof Error ? error.message : 'Unknown error'));
+  } catch (error: any) {
+    console.error('Error fetching transcript:', error.message);
+    throw new Error(`Failed to fetch transcript: ${error.message}`);
   }
 }
 
