@@ -18,6 +18,9 @@ const nextConfig = {
   },
   experimental: {
     missingSuspenseWithCSRBailout: false,
+  },
+  env: {
+    SUPADATA_API_KEY: process.env.SUPADATA_API_KEY,
   }
 };
 

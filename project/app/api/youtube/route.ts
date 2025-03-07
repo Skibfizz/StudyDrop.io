@@ -14,6 +14,7 @@ console.log('Environment:', process.env.NODE_ENV);
 console.log('OPENAI_API_KEY exists:', !!process.env.OPENAI_API_KEY);
 console.log('NEXT_PUBLIC_SUPABASE_URL exists:', !!process.env.NEXT_PUBLIC_SUPABASE_URL);
 console.log('NEXT_PUBLIC_SUPABASE_ANON_KEY exists:', !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+console.log('SUPADATA_API_KEY exists:', !!process.env.SUPADATA_API_KEY);
 
 const execAsync = promisify(exec);
 const openai = new OpenAI({
@@ -144,40 +145,81 @@ ${transcript}`
 async function fetchTranscriptWithJS(videoId: string) {
   console.log('Using optimized method to fetch transcript for video:', videoId);
   try {
-    // Use only the most effective transcript fetching method
-    console.log('Attempting to fetch transcript via third-party APIs');
+    // Use Supadata.ai API for fetching transcripts
+    console.log('[DEBUG] Getting video details for videoId:', videoId);
     
-    try {
-      // Create a timeout promise
-      const timeoutPromise = new Promise<Response>((_, reject) => {
-        setTimeout(() => reject(new Error('Request timeout after 8 seconds')), 8000);
-      });
+    // Check if Supadata API key exists
+    const SUPADATA_API_KEY = process.env.SUPADATA_API_KEY;
+    if (!SUPADATA_API_KEY) {
+      console.log('[DEBUG] Supadata API key not found, using fallback method');
       
-      // Create the fetch promise
-      const fetchPromise = fetch(`https://yt-transcript-api.vercel.app/api/transcript?videoId=${videoId}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
+      // Fallback to the previous method if Supadata API key is not available
+      try {
+        // Create a timeout promise
+        const timeoutPromise = new Promise<Response>((_, reject) => {
+          setTimeout(() => reject(new Error('Request timeout after 8 seconds')), 8000);
+        });
+        
+        // Create the fetch promise
+        const fetchPromise = fetch(`https://yt-transcript-api.vercel.app/api/transcript?videoId=${videoId}`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        });
+        
+        // Race the fetch against the timeout
+        const response = await Promise.race([fetchPromise, timeoutPromise]) as Response;
+        
+        if (response.ok) {
+          const data = await response.json();
+          if (data && data.transcript) {
+            console.log('Successfully fetched transcript via third-party API');
+            
+            const transcriptText = data.transcript
+              .map((item: any) => item.text)
+              .join(' ');
+            
+            return transcriptText;
+          }
         }
-      });
-      
-      // Race the fetch against the timeout
-      const response = await Promise.race([fetchPromise, timeoutPromise]) as Response;
-      
-      if (response.ok) {
-        const data = await response.json();
-        if (data && data.transcript) {
-          console.log('Successfully fetched transcript via third-party API');
-          
-          const transcriptText = data.transcript
-            .map((item: any) => item.text)
-            .join(' ');
-          
-          return transcriptText;
-        }
+      } catch (apiError) {
+        console.error('Error using third-party API:', apiError);
       }
-    } catch (apiError) {
-      console.error('Error using third-party API:', apiError);
+    } else {
+      // Use Supadata.ai API
+      console.log('Using Supadata.ai API to fetch transcript');
+      try {
+        const response = await fetch(`https://api.supadata.ai/v1/youtube/transcript`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': SUPADATA_API_KEY
+          },
+          body: JSON.stringify({
+            videoId: videoId,
+            text: true // Get plain text transcript
+          })
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          if (data && data.content && Array.isArray(data.content)) {
+            console.log('Successfully fetched transcript via Supadata.ai API');
+            
+            // Transform the Supadata response to plain text
+            const transcriptText = data.content
+              .map((segment: any) => segment.text)
+              .join(' ');
+            
+            return transcriptText;
+          }
+        } else {
+          console.error('Error response from Supadata.ai API:', await response.text());
+        }
+      } catch (supadataError) {
+        console.error('Error using Supadata.ai API:', supadataError);
+      }
     }
     
     // If transcript fetching fails, return a fallback message
