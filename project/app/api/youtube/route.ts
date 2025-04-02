@@ -6,6 +6,7 @@ import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import fetch from 'node-fetch';
 import { saveVideoSummary } from '@/lib/video-helpers';
+import { OpenAI as OpenAIType } from 'openai';
 
 // Add logging to help diagnose deployment issues
 console.log('YouTube API route loaded');
@@ -23,6 +24,14 @@ const openai = new OpenAI({
 });
 
 export const dynamic = 'force-dynamic';
+export const runtime = 'edge';
+
+// Add EdgeRuntime type declaration
+declare global {
+  var EdgeRuntime: {
+    waitUntil: (promise: Promise<any>) => void;
+  } | undefined;
+}
 
 // Create Supabase server client
 async function createSupabaseServerClient() {
@@ -607,92 +616,141 @@ export async function POST(req: Request) {
       }
     }
 
-    // Get video details (title and duration) first
+    // Get video details (title and duration) first - this is fast
     const { title: originalTitle, duration } = await getVideoDetails(videoId);
 
-    try {
-      console.log(`Fetching transcript for video ${videoId}`);
-      // Get transcript - this now returns a fallback message if it fails
-      const transcriptData = await getTranscript(videoId);
-      
-      console.log(`Processing transcript with AI for video ${videoId}`);
-      // Process with AI
-      const analysis = await processTranscriptWithAI(transcriptData);
-      
-      // Generate a more descriptive title
-      const descriptiveTitle = await generateDescriptiveTitle(transcriptData, originalTitle);
-
-      // Only increment usage after successful API response
-      if (user) {
-        await incrementUsage(user.id);
-      }
-
-      // Save to database if user is authenticated
-      if (user) {
-        try {
-          const { data, error } = await supabase
-            .from('content')
-            .insert({
-              user_id: user.id,
-              type: 'video',
-              title: descriptiveTitle,
-              content: {
-                videoId,
-                summary: analysis,
-                transcript: transcriptData,
-                duration
-              }
-            })
-            .select('id')
-            .single();
-            
-          if (error) {
-            console.error('Error saving video to database:', error);
-          } else {
-            console.log(`Saved video ${videoId} to database with ID ${data.id}`);
-          }
-        } catch (dbError) {
-          console.error('Error in database operation:', dbError);
-        }
-      }
-
-      // If excludeQuizQuestions is true, remove the quiz questions section
-      let finalAnalysis = analysis;
-      if (excludeQuizQuestions) {
-        const quizSectionIndex = analysis.indexOf('## Potential Quiz Questions');
-        if (quizSectionIndex !== -1) {
-          finalAnalysis = analysis.substring(0, quizSectionIndex).trim();
-        }
-      }
-
-      return new Response(JSON.stringify({ 
+    // Start fetching the transcript - this can be time-consuming
+    const transcriptPromise = getTranscript(videoId);
+    
+    // Return an immediate response with status "processing"
+    const response = new Response(
+      JSON.stringify({
         success: true,
-        videoId,
-        title: descriptiveTitle,
-        duration,
-        summary: finalAnalysis,
-        transcript: transcriptData
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' },
-      });
-    } catch (processingError) {
-      console.error('Error in YouTube API:', processingError);
-      
-      // Return a partial success with just the video details
-      return new Response(JSON.stringify({ 
-        success: false,
+        status: 'processing',
         videoId,
         title: originalTitle,
         duration,
-        error: 'Processing error',
-        message: 'We encountered an issue processing this video. Please try a different video or try again later.',
-        details: processingError instanceof Error ? processingError.message : String(processingError)
-      }), {
-        status: 500,
+        message: 'Your video is being processed. Please check back in a few moments.'
+      }),
+      {
+        status: 202, // Accepted
         headers: { 'Content-Type': 'application/json' },
+      }
+    );
+
+    // Use waitUntil to continue processing in the background
+    if (typeof EdgeRuntime !== 'undefined') {
+      // Process the rest in the background
+      EdgeRuntime.waitUntil(
+        (async () => {
+          try {
+            // Get transcript
+            const transcriptData = await transcriptPromise;
+            
+            console.log(`Processing transcript with AI for video ${videoId}`);
+            // Process with AI
+            const analysis = await processTranscriptWithAI(transcriptData);
+            
+            // Generate a more descriptive title
+            const descriptiveTitle = await generateDescriptiveTitle(transcriptData, originalTitle);
+
+            // Only increment usage after successful processing
+            if (user) {
+              await incrementUsage(user.id);
+            }
+
+            // Save to database if user is authenticated
+            if (user) {
+              try {
+                const { data, error } = await supabase
+                  .from('content')
+                  .insert({
+                    user_id: user.id,
+                    type: 'video',
+                    title: descriptiveTitle,
+                    content: {
+                      videoId,
+                      summary: analysis,
+                      transcript: transcriptData,
+                      duration
+                    }
+                  })
+                  .select('id')
+                  .single();
+                  
+                if (error) {
+                  console.error('Error saving video to database:', error);
+                } else {
+                  console.log(`Saved video ${videoId} to database with ID ${data.id}`);
+                }
+              } catch (dbError) {
+                console.error('Error in database operation:', dbError);
+              }
+            }
+            
+            console.log(`Background processing completed for video ${videoId}`);
+          } catch (error) {
+            console.error('Error in background processing:', error);
+          }
+        })()
+      );
+    } else {
+      // For environments where EdgeRuntime is not available, process synchronously
+      // but with a warning that it might time out
+      console.warn('EdgeRuntime not available, processing synchronously (may time out)');
+      
+      // Process the transcript in the main request (may cause timeout)
+      transcriptPromise.then(async (transcriptData) => {
+        try {
+          console.log(`Processing transcript with AI for video ${videoId}`);
+          // Process with AI
+          const analysis = await processTranscriptWithAI(transcriptData);
+          
+          // Generate a more descriptive title
+          const descriptiveTitle = await generateDescriptiveTitle(transcriptData, originalTitle);
+
+          // Only increment usage after successful processing
+          if (user) {
+            await incrementUsage(user.id);
+          }
+
+          // Save to database if user is authenticated
+          if (user) {
+            try {
+              const { data, error } = await supabase
+                .from('content')
+                .insert({
+                  user_id: user.id,
+                  type: 'video',
+                  title: descriptiveTitle,
+                  content: {
+                    videoId,
+                    summary: analysis,
+                    transcript: transcriptData,
+                    duration
+                  }
+                })
+                .select('id')
+                .single();
+                
+              if (error) {
+                console.error('Error saving video to database:', error);
+              } else {
+                console.log(`Saved video ${videoId} to database with ID ${data.id}`);
+              }
+            } catch (dbError) {
+              console.error('Error in database operation:', dbError);
+            }
+          }
+        } catch (error) {
+          console.error('Error in synchronous processing:', error);
+        }
+      }).catch(error => {
+        console.error('Error processing transcript:', error);
       });
     }
+
+    return response;
   } catch (error) {
     console.error('Unhandled error in YouTube API:', error);
     return new Response(JSON.stringify({ 
